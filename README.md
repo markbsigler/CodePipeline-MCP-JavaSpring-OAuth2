@@ -2,92 +2,464 @@
 
 A professional Java Spring Boot microservice with OAuth2 authentication and WebSocket real-time capabilities following MCP (Model Context Protocol) design principles.
 
-## Features
+# CodePipeline MCP Java Spring OAuth2
+
+A professional Java Spring Boot microservice with OAuth2 authentication and WebSocket real-time capabilities following MCP (Model Context Protocol) design principles.
+
+## 🏗️ System Architecture
+
+### High-Level Architecture
+
+```mermaid
+graph TD
+    A[Client] -->|HTTPS| B[API Gateway / Load Balancer]
+    B --> C[Spring Boot Application]
+    C --> D[PostgreSQL]
+    C --> E[Keycloak]
+    C --> F[Redis Cache]
+    
+    G[WebSocket Client] -->|WSS| C
+    C -->|WebSocket Events| G
+    
+    H[Monitoring] -->|Metrics| C
+    C -->|Logs| I[ELK Stack]
+```
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Application
+    participant K as Keycloak
+    
+    C->>K: 1. Request Access Token (Client Credentials/Password)
+    K-->>C: 2. JWT Token
+    C->>A: 3. API Request with JWT
+    A->>K: 4. Validate Token
+    K-->>A: 5. Token Info
+    A-->>C: 6. Response
+```
+
+### WebSocket Message Flow
+
+```mermaid
+sequenceDiagram
+    participant C as WebSocket Client
+    participant S as Spring App
+    participant B as Message Broker
+    
+    C->>S: 1. Connect (STOMP)
+    S-->>C: 2. CONNECTED
+    C->>S: 3. SUBSCRIBE /topic/messages
+    C->>S: 4. SEND /app/chat
+    S->>B: 5. Process Message
+    B-->>S: 6. Broadcast
+    S-->>C: 7. MESSAGE (to all subscribers)
+```
+
+## 🚀 Features
+
+### Core Features
 
 - **Spring Boot 3.2** with Java 17
-- **OAuth2 Resource Server** with JWT validation
-- **WebSocket** support with STOMP protocol
-- **PostgreSQL** database with Spring Data JPA
-- **OpenAPI 3.0** documentation with Swagger UI
-- **Docker** and **Docker Compose** support
-- **Actuator** for monitoring and management
-- **TestContainers** for integration testing
-- **Maven** build system
-- **Git** version control
+  - Modern Java features and performance improvements
+  - Auto-configuration and standalone deployment
 
-## Prerequisites
+- **Security**
+  - **OAuth2 Resource Server** with JWT validation
+  - **Keycloak** integration for identity management
+  - **Role-based access control** (RBAC)
+  - **CSRF protection**
+  - **CORS** configuration
 
-- Java 17 or later
-- Maven 3.9+ or Gradle 8+
-- Docker and Docker Compose (for containerized deployment)
-- PostgreSQL 14+ (or use Docker)
+- **Real-time Communication**
+  - **WebSocket** support with STOMP protocol
+  - **Message broadcasting** and direct messaging
+  - **User presence** tracking
+  - **Event-driven** architecture
 
-## Getting Started
+- **Data Layer**
+  - **PostgreSQL** with **Spring Data JPA**
+  - **Flyway** for database migrations
+  - **QueryDSL** for type-safe queries
+  - **Auditing** (createdAt, updatedAt, etc.)
 
-### Local Development
+- **API**
+  - **RESTful** endpoints
+  - **OpenAPI 3.0** documentation with **Swagger UI**
+  - **HATEOAS** for discoverable APIs
+  - **Pagination** and **filtering**
+  - **Validation** and **error handling**
 
-1. Clone the repository:
+- **DevOps**
+  - **Docker** and **Docker Compose** support
+  - **Maven** build system
+  - **Git** version control
+  - **CI/CD** ready
+
+- **Monitoring**
+  - **Spring Boot Actuator**
+  - **Health checks**
+  - **Metrics** with Prometheus
+  - **Distributed tracing**
+
+- **Testing**
+  - **JUnit 5**
+  - **TestContainers** for integration testing
+  - **MockMVC** for controller testing
+  - **Test coverage** reports
+
+## 🛠️ Prerequisites
+
+- **Java Development Kit (JDK) 17** or later
+  - [Download OpenJDK 17](https://adoptium.net/)
+  - Verify: `java -version`
+
+- **Maven 3.9+** or **Gradle 8+**
+  - [Install Maven](https://maven.apache.org/install.html)
+  - Verify: `mvn -v`
+
+- **Docker and Docker Compose**
+  - [Install Docker Desktop](https://www.docker.com/products/docker-desktop)
+  - Verify: `docker --version` and `docker-compose --version`
+
+- **Database**
+  - PostgreSQL 14+ (included in Docker Compose)
+  - Or install [PostgreSQL](https://www.postgresql.org/download/) locally
+
+- **IDE** (Recommended)
+  - [IntelliJ IDEA](https://www.jetbrains.com/idea/)
+  - [VS Code](https://code.visualstudio.com/) with Java extensions
+  - [Eclipse](https://www.eclipse.org/downloads/)
+
+- **API Testing Tools**
+  - [Postman](https://www.postman.com/)
+  - [cURL](https://curl.se/)
+  - [httpie](https://httpie.io/)
+
+## 🚀 Getting Started
+
+### Local Development Setup
+
+1. **Clone the repository**
    ```bash
    git clone https://github.com/yourusername/CodePipeline-MCP-JavaSpring-OAuth2.git
    cd CodePipeline-MCP-JavaSpring-OAuth2
    ```
 
-2. Start the development environment:
+2. **Start the infrastructure**
    ```bash
    docker-compose up -d
    ```
+   This will start:
+   - PostgreSQL database
+   - Keycloak OAuth2 server
+   - PgAdmin (optional, for database management)
 
-3. Run the application:
+3. **Configure Keycloak**
+   - Access Keycloak Admin Console: http://localhost:8081/
+   - Login with `admin/admin`
+   - Import the realm configuration from `keycloak/realm-export.json`
+
+4. **Run the application**
    ```bash
+   # Using Maven wrapper
    ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+   
+   # Or build and run the JAR
+   ./mvnw clean package
+   java -jar target/codepipeline-mcp-0.0.1-SNAPSHOT.jar
    ```
 
-4. Access the application:
-   - API: http://localhost:8080/api
-   - Swagger UI: http://localhost:8080/api/swagger-ui.html
-   - H2 Console: http://localhost:8080/api/h2-console
+5. **Access the application**
+   - **API Base URL**: http://localhost:8080/api
+   - **Swagger UI**: http://localhost:8080/api/swagger-ui.html
+   - **H2 Console**: http://localhost:8080/api/h2-console
+     - JDBC URL: `jdbc:h2:mem:testdb`
+     - Username: `sa`
+     - Password: (leave empty)
+
+6. **Test Users**
+   - **Admin User**
+     - Username: `admin`
+     - Password: `admin`
+     - Roles: `ROLE_ADMIN`, `ROLE_USER`
+   - **Regular User**
+     - Username: `user`
+     - Password: `password`
+     - Roles: `ROLE_USER`
+
+### Testing the Application
+
+1. **Run unit tests**
+   ```bash
+   ./mvnw test
+   ```
+
+2. **Run integration tests**
+   ```bash
+   ./mvnw verify -Pintegration-test
+   ```
+
+3. **Generate test coverage report**
+   ```bash
+   ./mvnw jacoco:report
+   # Open target/site/jacoco/index.html in browser
+   ```
+
+## 📚 API Documentation
+
+### Authentication
+
+1. **Get Access Token**
+   ```http
+   POST /auth/realms/mcp/protocol/openid-connect/token
+   Content-Type: application/x-www-form-urlencoded
+   
+   client_id=mcp-client
+   &username=user
+   &password=password
+   &grant_type=password
+   &client_secret=your-client-secret
+   ```
+
+2. **Using the Access Token**
+   ```http
+   GET /api/messages
+   Authorization: Bearer <access_token>
+   ```
+
+### Available Endpoints
+
+#### Messages
+
+- `GET /api/messages` - Get all messages (paginated)
+- `GET /api/messages/{id}` - Get message by ID
+- `POST /api/messages` - Create a new message
+- `PUT /api/messages/{id}` - Update a message
+- `DELETE /api/messages/{id}` - Delete a message
+- `GET /api/messages/search?query={query}` - Search messages
+
+#### WebSocket Endpoints
+
+- `/ws` - WebSocket endpoint
+- `/topic/messages` - Subscribe to message updates
+- `/queue/private` - Private message queue
+- `/app/chat` - Send a message
+
+### Example Requests
+
+**Create a Message**
+```http
+POST /api/messages
+Content-Type: application/json
+Authorization: Bearer <access_token>
+
+{
+  "content": "Hello, World!",
+  "recipient": "user2"
+}
+```
+
+**Subscribe to Messages**
+```javascript
+const socket = new SockJS('/ws');
+const stompClient = Stomp.over(socket);
+
+stompClient.connect({}, function(frame) {
+    console.log('Connected: ' + frame);
+    
+    // Subscribe to public messages
+    stompClient.subscribe('/topic/messages', function(message) {
+        console.log('New message: ' + message.body);
+    });
+    
+    // Subscribe to private messages
+    stompClient.subscribe('/user/queue/private', function(message) {
+        console.log('Private message: ' + message.body);
+    });
+});
+```
+
+## 🔧 Configuration
 
 ### Environment Variables
 
 Create a `.env` file in the project root with the following variables:
 
 ```env
-# Database
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-DB_NAME=mcp_db
-
-# OAuth2
-OAUTH2_ISSUER_URI=http://keycloak:8080/auth/realms/mcp
-OAUTH2_JWK_SET_URI=http://keycloak:8080/auth/realms/mcp/protocol/openid-connect/certs
-OAUTH2_AUDIENCE=mcp-api
-
 # Application
 SERVER_PORT=8080
 SERVER_SERVLET_CONTEXT_PATH=/api
+
+# Database
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/mcp_db
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=postgres
+
+# JPA/Hibernate
+SPRING_JPA_HIBERNATE_DDL_AUTO=update
+SPRING_JPA_SHOW_SQL=true
+
+# OAuth2 Resource Server
+SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8081/realms/mcp
+SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://localhost:8081/realms/mcp/protocol/openid-connect/certs
+
+# Logging
+LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB=INFO
+LOGGING_LEVEL_COM_CODEPIPELINE=DEBUG
+
+# Actuator
+MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics
+MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always
 ```
 
-## Project Structure
+## 🚀 Deployment
+
+### Docker Deployment
+
+1. **Build the application**
+   ```bash
+   ./mvnw clean package -DskipTests
+   docker build -t codepipeline-mcp .
+   ```
+
+2. **Run with Docker Compose**
+   ```bash
+   # For development
+   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+   
+   # For production
+   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+   ```
+
+### Kubernetes Deployment
+
+1. **Create Kubernetes secrets**
+   ```bash
+   kubectl create secret generic db-secret \
+     --from-literal=username=postgres \
+     --from-literal=password=postgres
+   ```
+
+2. **Deploy the application**
+   ```bash
+   kubectl apply -f k8s/
+   ```
+
+## 🛡️ Security
+
+### Authentication Flow
+
+1. Client requests an access token from Keycloak
+2. Keycloak issues a JWT token
+3. Client includes the token in the `Authorization` header
+4. Resource server validates the token and checks scopes/roles
+
+### Security Headers
+
+The application includes the following security headers by default:
+- Content Security Policy (CSP)
+- X-Content-Type-Options
+- X-Frame-Options
+- X-XSS-Protection
+- Strict-Transport-Security (HSTS)
+
+## 📊 Monitoring
+
+### Actuator Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `/actuator/health` | Application health information |
+| `/actuator/info` | Application information |
+| `/actuator/metrics` | Application metrics |
+| `/actuator/prometheus` | Prometheus metrics |
+
+### Logging
+
+Logs are written to `logs/application.log` and can be configured in `logback-spring.xml`.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Spring Boot](https://spring.io/projects/spring-boot)
+- [Spring Security](https://spring.io/projects/spring-security)
+- [Keycloak](https://www.keycloak.org/)
+- [Docker](https://www.docker.com/)
+- [Kubernetes](https://kubernetes.io/)
+- [PostgreSQL](https://www.postgresql.org/)
+- [WebSocket](https://spring.io/guides/gs/messaging-stomp-websocket/)
+
+## 🏗️ Project Structure
 
 ```
-src/
-├── main/
-│   ├── java/com/codepipeline/mcp/
-│   │   ├── config/          # Configuration classes
-│   │   ├── controller/      # REST controllers
-│   │   ├── dto/            # Data Transfer Objects
-│   │   ├── exception/      # Exception handling
-│   │   ├── model/          # JPA entities
-│   │   ├── repository/     # Spring Data repositories
-│   │   ├── security/       # Security configurations
-│   │   ├── service/        # Business logic
-│   │   └── websocket/      # WebSocket configurations and controllers
-│   └── resources/
-│       ├── application.yml       # Main configuration
-│       ├── application-dev.yml   # Development profile
-│       └── application-prod.yml  # Production profile
-└── test/                    # Test classes
+.
+├── src/
+│   ├── main/
+│   │   ├── java/com/codepipeline/mcp/
+│   │   │   ├── config/          # Configuration classes
+│   │   │   ├── controller/      # REST controllers
+│   │   │   ├── dto/            # Data Transfer Objects
+│   │   │   ├── exception/      # Exception handling
+│   │   │   ├── model/          # JPA entities
+│   │   │   ├── repository/     # Spring Data repositories
+│   │   │   ├── security/       # Security configurations
+│   │   │   ├── service/        # Business logic
+│   │   │   └── websocket/      # WebSocket configurations
+│   │   └── resources/
+│   │       ├── application.yml       # Main configuration
+│   │       ├── application-dev.yml   # Development profile
+│   │       └── application-prod.yml  # Production profile
+│   └── test/                    # Test classes
+├── .github/                    # GitHub workflow files
+├── docker/                     # Docker configuration files
+├── k8s/                        # Kubernetes manifests
+├── keycloak/                   # Keycloak configuration
+├── .gitignore
+├── docker-compose.yml
+├── Dockerfile
+├── mvnw
+├── pom.xml
+└── README.md
 ```
+
+### Key Components
+
+- **`config/`**: Spring configuration classes
+  - `SecurityConfig.java`: Security configuration
+  - `WebSocketConfig.java`: WebSocket configuration
+  - `OpenAPIConfig.java`: OpenAPI/Swagger configuration
+
+- **`controller/`**: REST controllers
+  - `MessageController.java`: Message REST endpoints
+  - `WebSocketController.java`: WebSocket message handling
+
+- **`model/`**: JPA entities
+  - `Message.java`: Message entity with JPA annotations
+
+- **`service/`**: Business logic
+  - `MessageService.java`: Message business logic
+
+- **`security/`**: Security configurations
+  - `JwtRoleConverter.java`: JWT role conversion
+  - `SecurityUtils.java`: Security utilities
+
+- **`websocket/`**: WebSocket components
+  - `WebSocketEventListener.java`: WebSocket event handling
+  - `WebSocketMessageBrokerConfig.java`: WebSocket broker configuration
 
 ## API Documentation
 
