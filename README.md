@@ -2,10 +2,6 @@
 
 A professional Java Spring Boot microservice with OAuth2 authentication and WebSocket real-time capabilities following MCP (Model Context Protocol) design principles.
 
-# CodePipeline MCP Java Spring OAuth2
-
-A professional Java Spring Boot microservice with OAuth2 authentication and WebSocket real-time capabilities following MCP (Model Context Protocol) design principles.
-
 ## 🏗️ System Architecture
 
 ### High-Level Architecture
