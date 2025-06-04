@@ -1,0 +1,79 @@
+# Production specific configuration
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  # Use PostgreSQL in production
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      idle-timeout: 600000
+
+  # Production security settings
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OAUTH2_ISSUER_URI}
+          jwk-set-uri: ${OAUTH2_JWK_SET_URI}
+          audience: ${OAUTH2_AUDIENCE}
+
+# Production logging configuration
+logging:
+  level:
+    root: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    com.codepipeline: INFO
+  file:
+    name: /var/log/mcp/application.log
+    max-size: 100MB
+    max-history: 30
+
+# Production server settings
+server:
+  compression:
+    enabled: true
+  error:
+    include-message: always
+    include-binding-errors: never
+    include-stacktrace: never
+
+# Production management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      roles: ACTUATOR
+    prometheus:
+      enabled: true
+  metrics:
+    enable:
+      http:
+        server:
+          requests: true
+    distribution:
+      percentiles:
+        http.server.requests: 0.5,0.75,0.95,0.99
+
+# Production security settings
+  security:
+    enable-csrf: true
+    require-ssl: true
+    headers:
+      hsts: max-age=31536000 ; includeSubDomains
+      xss-protection: 1; mode=block
+      content-security-policy: default-src 'self'

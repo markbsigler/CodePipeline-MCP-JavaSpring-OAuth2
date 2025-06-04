@@ -1,0 +1,95 @@
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs
+hs_err_pid*
+
+# Maven
+target/
+
+# Gradle
+.gradle/
+build/
+
+# IDE specific files
+.idea/
+*.iml
+*.ipr
+*.iws
+.settings/
+.classpath
+.project
+.factorypath
+
+# VS Code specific
+.vscode/
+
+# Spring Boot
+spring-boot-devtools/
+
+# Application Properties
+application-*.properties
+application-*.yml
+
+# Logs
+logs/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Environment variables
+.env
+
+# Test reports
+test-output/
+
+# Mac OS specific
+.DS_Store
+
+# Application specific
+**/src/main/resources/static/upload/
+**/upload/
+**/tmp/
+
+# Maven Wrapper
+.mvn/wrapper/maven-wrapper.jar
+
+# Local development
+data/
+
+# H2 Database
+*.h2.db
+*.lock
+
+# Virtual Machine
+*.vdi
+*.vmdk
+*.vm*
+
+# Kubernetes
+k8s/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Application specific
+**/node_modules/
+**/dist/
+**/build/
+**/out/

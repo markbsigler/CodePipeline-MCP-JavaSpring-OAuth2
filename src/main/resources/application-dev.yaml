@@ -1,0 +1,49 @@
+# Development specific configuration
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# Use H2 in-memory database for development
+  datasource:
+    url: jdbc:h2:mem:mcdevdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: password
+    driver-class-name: org.h2.Driver
+
+# Disable security for development
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://fake-issuer
+          jwk-set-uri: http://fake-jwks
+
+# Enable additional development endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+# Enable additional logging for development
+logging:
+  level:
+    org.springframework: DEBUG
+    org.hibernate: DEBUG
+    com.codepipeline: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Disable CSRF for development
+  security:
+    enable-csrf: false

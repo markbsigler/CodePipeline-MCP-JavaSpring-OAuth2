@@ -1,0 +1,106 @@
+spring:
+  application:
+    name: code-pipeline-mcp
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mcp_db
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  # Web Configuration
+  web:
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "*"
+      allowed-headers: "*"
+
+  # Actuator Configuration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OAUTH2_ISSUER_URI:http://localhost:8080/auth/realms/mcp}
+          jwk-set-uri: ${OAUTH2_JWK_SET_URI:http://localhost:8080/auth/realms/mcp/protocol/openid-connect/certs}
+          audience: mcp-api
+
+# MCP Configuration
+mcp:
+  client:
+    websocket:
+      enabled: true
+      endpoint: /ws
+      allowed-origins: "*"
+      heartbeat-interval: 30000
+      connection-timeout: 10000
+      max-sessions: 1000
+      buffer-size: 8192
+      compression: true
+      protocols: ["mcp-v1", "stomp"]
+    oauth:
+      client-id: ${MCP_CLIENT_ID:mcp-client}
+      client-secret: ${MCP_CLIENT_SECRET:}
+      scope: "read write"
+      token-endpoint: ${OAUTH_TOKEN_ENDPOINT:}
+      jwk-set-uri: ${OAUTH_JWK_SET_URI:}
+    event-types:
+      - "pet:created"
+      - "pet:updated"
+      - "pet:deleted"
+      - "order:created"
+      - "order:updated"
+      - "order:cancelled"
+      - "inventory:updated"
+    topics:
+      pets: "/topic/pets"
+      orders: "/topic/orders"
+      inventory: "/topic/inventory"
+      users: "/topic/users"
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.codepipeline: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/application.log
+    max-history: 7
+    max-size: 10MB
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,application/javascript,text/css
+
+# OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    doc-expansion: none
+    filter: true
+  show-actuator: true

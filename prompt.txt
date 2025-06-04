@@ -1,0 +1,207 @@
+# Create a Professional Java Spring Boot Microservice Project with OAuth2
+
+**Project Name:** CodePipeline-MCP-JavaSpring-OAuth2  
+**Local Path:** /Users/msigler/Code  
+**Repository Setup:** Initialize Git with Java/Spring .gitignore template
+
+## Technical Requirements:
+
+### 1. Technology Stack:
+- **Java Version:** 17 or 21 (LTS)
+- **Spring Boot Version:** 3.2.x
+- **Build Tool:** Maven 3.9+ or Gradle 8+
+- **Database:** PostgreSQL with Spring Data JPA
+- **Testing:** JUnit 5, Mockito, TestContainers
+
+### 2. API Implementation:
+- Implement OpenAPI specification from `ispw_openapi_spec.json`
+- Use OpenAPI Generator Maven/Gradle plugin for server code generation
+- Configure Swagger UI for API documentation and testing
+- Implement proper request/response validation with Bean Validation
+
+### 3. Architecture Pattern:
+- Apply Model Context Protocol (MCP) design principles
+- Implement WebSocket support using Spring WebSocket
+- Configure STOMP protocol for real-time bidirectional communication
+- Use Spring Security for WebSocket authentication
+- Apply Clean Architecture principles with proper layer separation
+
+### 4. Security Implementation:
+- **OAuth 2.1** with Spring Security OAuth2 Resource Server
+- JWT token validation and authorization
+- CORS configuration for cross-origin requests
+- Rate limiting using Spring Boot Actuator and custom interceptors
+- WebSocket security with authentication and authorization filters
+
+### 5. Infrastructure & DevOps:
+- **Dockerfile:** Multi-stage build with Eclipse Temurin OpenJDK base image
+- **Docker Compose:** Local development environment with PostgreSQL
+- Health check endpoints using Spring Boot Actuator
+- Environment-specific configuration with Spring Profiles
+- Logging configuration with Logback and structured JSON output
+
+### 6. Development & Quality Tools:
+- **Testing:** JUnit 5, Mockito for unit tests, TestContainers for integration tests
+- **Code Quality:** SpotBugs, PMD, Checkstyle with Maven/Gradle plugins
+- **Documentation:** JavaDoc with proper annotations
+- **CI/CD:** GitHub Actions or Jenkins pipeline templates
+- **Development:** Spring Boot DevTools for hot reloading
+
+### 7. WebSocket Real-time Features:
+- STOMP messaging for real-time updates
+- Topic-based subscriptions for different domain areas
+- WebSocket connection management and heartbeat
+- Message authentication and authorization
+- Connection pooling and scaling considerations
+
+## Project Structure:
+```
+src/
+├── main/
+│   ├── java/
+│   │   └── com/codepipeline/mcp/
+│   │       ├── Application.java
+│   │       ├── config/
+│   │       │   ├── SecurityConfig.java
+│   │       │   ├── WebSocketConfig.java
+│   │       │   └── OAuth2Config.java
+│   │       ├── controller/
+│   │       ├── service/
+│   │       ├── repository/
+│   │       ├── model/
+│   │       ├── dto/
+│   │       └── websocket/
+│   └── resources/
+│       ├── application.yml
+│       ├── application-dev.yml
+│       ├── application-prod.yml
+│       └── static/
+└── test/
+    └── java/
+        └── com/codepipeline/mcp/
+```
+
+## VS Code Configuration for Java Development:
+
+### Required Extensions:
+- Extension Pack for Java (Microsoft)
+- Spring Boot Extension Pack (VMware)
+- REST Client or Thunder Client for API testing
+- Docker (Microsoft)
+
+### settings.json:
+```json
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.compile.nullAnalysis.mode": "automatic",
+  "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+  "java.saveActions.organizeImports": true,
+  "java.completion.importOrder": [
+    "java",
+    "javax",
+    "org",
+    "com"
+  ],
+  "spring-boot.ls.problem.application-properties.unknown-property": "WARNING",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true,
+    "source.fixAll": true
+  },
+  "files.exclude": {
+    "**/target": true,
+    "**/.gradle": true,
+    "**/build": true,
+    "**/.classpath": true,
+    "**/.project": true,
+    "**/.settings": true,
+    "**/.factorypath": true
+  },
+  "java.test.config": {
+    "name": "myConfiguration",
+    "vmArgs": ["-Dspring.profiles.active=test"]
+  },
+  "java.debug.settings.enableRunDebugCodeLens": true,
+  "java.inlayHints.parameterNames.enabled": "all"
+}
+```
+
+## MCP WebSocket Configuration (application.yml):
+
+```yaml
+# MCP WebSocket and OAuth Configuration
+mcp:
+  client:
+    websocket:
+      enabled: true
+      endpoint: "/ws"
+      allowed-origins: "*"
+      heartbeat-interval: 30000
+      connection-timeout: 10000
+      max-sessions: 1000
+      buffer-size: 8192
+      compression: true
+      protocols: ["mcp-v1", "stomp"]
+    oauth:
+      client-id: ${MCP_CLIENT_ID:default-client}
+      client-secret: ${MCP_CLIENT_SECRET:}
+      scope: "read write"
+      token-endpoint: ${OAUTH_TOKEN_ENDPOINT:}
+      jwk-set-uri: ${OAUTH_JWK_SET_URI:}
+    event-types:
+      - "pet:created"
+      - "pet:updated"
+      - "pet:deleted"
+      - "order:created"
+      - "order:updated"
+      - "order:cancelled"
+      - "inventory:updated"
+    topics:
+      pets: "/topic/pets"
+      orders: "/topic/orders"
+      inventory: "/topic/inventory"
+      users: "/topic/users"
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${OAUTH_JWK_SET_URI}
+  websocket:
+    servlet:
+      allowed-origins: "*"
+```
+
+## Key Java/Spring Features:
+
+### 1. **OAuth2 Resource Server Configuration:**
+- JWT token validation with proper claims extraction
+- Method-level security annotations
+- Custom authentication providers
+
+### 2. **WebSocket Real-time Communication:**
+- STOMP protocol implementation
+- Topic-based message broadcasting
+- Authentication integration for WebSocket connections
+- Message-level authorization
+
+### 3. **Spring Boot Best Practices:**
+- Configuration properties with validation
+- Proper exception handling with @ControllerAdvice
+- Health checks and metrics with Actuator
+- Profile-based configuration management
+
+### 4. **Testing Strategy:**
+- Unit tests with JUnit 5 and Mockito
+- Integration tests with @SpringBootTest
+- WebSocket testing with TestContainers
+- Security testing with Spring Security Test
+
+### 5. **Production Readiness:**
+- Proper logging configuration
+- Health check endpoints
+- Metrics and monitoring integration
+- Docker containerization with security best practices
+
+This configuration provides a solid foundation for a professional Java Spring Boot microservice with OAuth2 authentication and WebSocket real-time capabilities following MCP design principles.

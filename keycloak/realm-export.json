@@ -1,0 +1,127 @@
+{
+  "id": "mcp",
+  "realm": "mcp",
+  "enabled": true,
+  "sslRequired": "external",
+  "roles": {
+    "realm": [
+      {
+        "name": "ROLE_USER",
+        "description": "Regular user with limited access"
+      },
+      {
+        "name": "ROLE_ADMIN",
+        "description": "Administrator with full access"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "user",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ],
+      "realmRoles": [
+        "ROLE_USER"
+      ]
+    },
+    {
+      "username": "admin",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin"
+        }
+      ],
+      "realmRoles": [
+        "ROLE_ADMIN"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "mcp-client",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "mcp-secret",
+      "redirectUris": [
+        "http://localhost:8080/api/*"
+      ],
+      "webOrigins": ["*"],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": true,
+      "fullScopeAllowed": true
+    },
+    {
+      "clientId": "mcp-api",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": true,
+      "fullScopeAllowed": true
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "roles",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "foo",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "access.tokenResponse.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "email",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "email",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": [
+    "web-origins",
+    "acr",
+    "roles",
+    "profile",
+    "email"
+  ]
+}
