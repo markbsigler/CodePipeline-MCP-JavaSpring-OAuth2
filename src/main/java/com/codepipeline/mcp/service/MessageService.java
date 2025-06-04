@@ -58,17 +58,8 @@ public class MessageService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Message> search(String content, Pageable pageable) {
-        List<Message> messages = messageRepository.findByContentContainingIgnoreCase(content);
-        
-        // Apply pagination manually since we're not using JPA's Pageable with custom query
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), messages.size());
-        
-        return new PageImpl<>(
-            messages.subList(start, end),
-            pageable,
-            messages.size()
-        );
+    public Page<Message> search(String query, Pageable pageable) {
+        // Use the paginated case-insensitive search method from the repository
+        return messageRepository.findByContentContainingIgnoreCase(query, pageable);
     }
 }

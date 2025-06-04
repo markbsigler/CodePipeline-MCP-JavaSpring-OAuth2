@@ -13,6 +13,12 @@ import java.util.List;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, String>, JpaSpecificationExecutor<Message> {
+    
+    /**
+     * Find all messages sent by a specific sender
+     * @param sender the sender's username
+     * @return list of messages sent by the specified sender
+     */
     List<Message> findBySender(String sender);
     
     @Query("SELECT m FROM Message m WHERE LOWER(m.content) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
