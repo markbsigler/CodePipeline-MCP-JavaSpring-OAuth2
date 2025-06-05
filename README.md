@@ -42,24 +42,24 @@ graph TD
     B --> C[Filter by status/application]
     D[POST /api/assignments] --> E[Create Assignment]
     E --> F[Validate input]
-    G[GET /api/assignments/{id}] --> H[Get Assignment Details]
+    G[GET /api/assignments/id] --> H[Get Assignment Details]
     H --> I[Include tasks]
-    J[PUT /api/assignments/{id}] --> K[Update Assignment]
+    J[PUT /api/assignments/id] --> K[Update Assignment]
     K --> L[Validate ownership]
-    M[DELETE /api/assignments/{id}] --> N[Delete Assignment]
+    M[DELETE /api/assignments/id] --> N[Delete Assignment]
     N --> O[Cascade delete tasks]
 ```
 
 #### Task Management
 ```mermaid
 graph TD
-    A[GET /api/assignments/{id}/tasks] --> B[List Tasks]
+    A[GET /api/assignments/id/tasks] --> B[List Tasks]
     B --> C[Filter by status]
-    D[POST /api/assignments/{id}/tasks] --> E[Create Task]
+    D[POST /api/assignments/id/tasks] --> E[Create Task]
     E --> F[Validate assignment exists]
-    G[PUT /api/tasks/{id}] --> H[Update Task]
+    G[PUT /api/tasks/id] --> H[Update Task]
     H --> I[Check permissions]
-    J[DELETE /api/tasks/{id}] --> K[Delete Task]
+    J[DELETE /api/tasks/id] --> K[Delete Task]
     K --> L[Update assignment status]
 ```
 
@@ -70,24 +70,24 @@ graph TD
     B --> C[Filter by application/status]
     D[POST /api/releases] --> E[Create Release]
     E --> F[Validate input]
-    G[GET /api/releases/{id}] --> H[Get Release Details]
+    G[GET /api/releases/id] --> H[Get Release Details]
     H --> I[Include release sets]
-    J[PUT /api/releases/{id}] --> K[Update Release]
+    J[PUT /api/releases/id] --> K[Update Release]
     K --> L[Validate ownership]
-    M[DELETE /api/releases/{id}] --> N[Delete Release]
+    M[DELETE /api/releases/id] --> N[Delete Release]
     N --> O[Cascade delete sets]
 ```
 
 #### Release Set Management
 ```mermaid
 graph TD
-    A[POST /api/releases/{id}/sets] --> B[Create Release Set]
+    A[POST /api/releases/id/sets] --> B[Create Release Set]
     B --> C[Validate release exists]
-    D[GET /api/releases/{id}/sets/{setId}] --> E[Get Set Details]
+    D[GET /api/releases/id/sets/setId] --> E[Get Set Details]
     E --> F[Include deployment history]
-    G[PUT /api/releases/{id}/sets/{setId}] --> H[Update Set]
+    G[PUT /api/releases/id/sets/setId] --> H[Update Set]
     H --> I[Validate status transition]
-    J[POST /api/releases/{id}/sets/{setId}/deploy] --> K[Deploy Set]
+    J[POST /api/releases/id/sets/setId/deploy] --> K[Deploy Set]
     K --> L[Trigger deployment workflow]
 ```
 
