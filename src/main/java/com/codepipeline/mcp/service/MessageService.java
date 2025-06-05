@@ -34,6 +34,15 @@ public class MessageService {
 
     @Transactional
     public Message create(Message message) {
+        if (message == null) {
+            throw new IllegalArgumentException("Message cannot be null");
+        }
+        if (message.getContent() == null || message.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Message content cannot be null or empty");
+        }
+        if (message.getSender() == null || message.getSender().trim().isEmpty()) {
+            throw new IllegalArgumentException("Message sender cannot be null or empty");
+        }
         return messageRepository.save(message);
     }
 
