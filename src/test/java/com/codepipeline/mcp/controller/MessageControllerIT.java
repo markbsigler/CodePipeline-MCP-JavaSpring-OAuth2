@@ -4,7 +4,7 @@ import com.codepipeline.mcp.BaseIntegrationTest;
 import com.codepipeline.mcp.dto.MessageDto;
 import com.codepipeline.mcp.model.Message;
 import com.codepipeline.mcp.repository.MessageRepository;
-import com.codepipeline.mcp.util.TestDataUtil;
+import com.codepipeline.mcp.util.TestDataFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +48,7 @@ class MessageControllerIT extends BaseIntegrationTest {
     void setUp() {
         messageRepository.deleteAll();
         
-        testMessage = TestDataUtil.createTestMessage("Test message", "testuser@example.com");
+        testMessage = TestDataFactory.createMessage("Test message", "testuser@example.com");
         testMessage = messageRepository.save(testMessage);
         messageId = testMessage.getId();
     }
@@ -120,7 +120,10 @@ class MessageControllerIT extends BaseIntegrationTest {
         @DisplayName("should create a new message")
         void shouldCreateMessage() throws Exception {
             // Given
-            MessageDto messageDto = TestDataUtil.createTestMessageDto("New test message", "testuser@example.com");
+            MessageDto messageDto = MessageDto.builder()
+                    .content("New test message")
+                    .sender("testuser@example.com")
+                    .build();
 
             // When
             ResultActions result = mockMvc.perform(post("/api/messages")
@@ -166,7 +169,10 @@ class MessageControllerIT extends BaseIntegrationTest {
         @DisplayName("should update an existing message")
         void shouldUpdateMessage() throws Exception {
             // Given
-            MessageDto updateDto = TestDataUtil.createTestMessageDto("Updated content", "testuser@example.com");
+            MessageDto updateDto = MessageDto.builder()
+                    .content("Updated content")
+                    .sender("testuser@example.com")
+                    .build();
 
             // When
             ResultActions result = mockMvc.perform(put("/api/messages/{id}", messageId)
@@ -188,7 +194,10 @@ class MessageControllerIT extends BaseIntegrationTest {
         @WithMockUser(username = "otheruser")
         void shouldReturn403WhenUpdatingAnotherUsersMessage() throws Exception {
             // Given - test message was created by "testuser" in setup
-            MessageDto updateDto = TestDataUtil.createTestMessageDto("Unauthorized update", "otheruser@example.com");
+            MessageDto updateDto = MessageDto.builder()
+                    .content("Unauthorized update")
+                    .sender("otheruser@example.com")
+                    .build();
 
             // When
             ResultActions result = mockMvc.perform(put("/api/messages/{id}", messageId)

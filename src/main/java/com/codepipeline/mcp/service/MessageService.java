@@ -55,6 +55,11 @@ public class MessageService {
     public List<Message> findBySender(String sender) {
         return messageRepository.findBySender(sender);
     }
+    
+    @Transactional(readOnly = true)
+    public Page<Message> findBySender(String sender, Pageable pageable) {
+        return messageRepository.findBySender(sender, pageable);
+    }
 
     @Transactional(readOnly = true)
     public Page<Message> search(String query, Pageable pageable) {

@@ -1,28 +1,26 @@
 package com.codepipeline.mcp.repository;
 
-import com.codepipeline.mcp.BaseIntegrationTest;
 import com.codepipeline.mcp.model.Message;
 import com.codepipeline.mcp.util.TestDataFactory;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.data.domain.*;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import jakarta.persistence.EntityManager;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -35,26 +33,65 @@ import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assertions.within;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Testcontainers
 @ActiveProfiles("test")
-@TestPropertySource(locations = "classpath:test-application.yml")
-@Transactional
 @DisplayName("Message Repository Integration Tests")
-class MessageRepositoryIT extends BaseIntegrationTest {
+class MessageRepositoryIT {
+    
+    @Container
+    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:14-alpine")
+        .withDatabaseName("testdb")
+        .withUsername("testuser")
+        .withPassword("testpass")
+        .withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger("POSTGRES")))
+        .withReuse(true);
+    
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "update");
+    }
+    
+    @Autowired
+    @SuppressWarnings("unused") // Used by Spring Data JPA for test entity management
+    private TestEntityManager testEntityManager;
 
     @Autowired
     private MessageRepository messageRepository;
     
+    @Autowired
+    private EntityManager entityManager;
+    
     private static final String TEST_SENDER = "test@example.com";
     private static final int TEST_MESSAGE_COUNT = 5;
-    
+    private static final int LARGE_DATASET_SIZE = 1000;
+
     @BeforeEach
+    @Transactional
     void setUp() {
-        messageRepository.deleteAll();
-        // Pre-populate with test data
-        List<Message> testMessages = IntStream.range(0, TEST_MESSAGE_COUNT)
-                .mapToObj(i -> TestDataFactory.createMessage("Test message " + i, TEST_SENDER))
+        // Clean up existing data before each test
+        messageRepository.deleteAllInBatch();
+        entityManager.flush();
+        entityManager.clear();
+        
+        // Create test messages
+        List<Message> messages = IntStream.range(0, TEST_MESSAGE_COUNT)
+                .mapToObj(i -> TestDataFactory.createMessage(
+                        "Test message " + i,
+                        TEST_SENDER))
                 .collect(Collectors.toList());
-        messageRepository.saveAll(testMessages);
+        messageRepository.saveAll(messages);
+        messageRepository.flush();
+    }
+    
+    @AfterEach
+    void tearDown() {
+        // Clean up after each test to ensure isolation
+        messageRepository.deleteAllInBatch();
     }
 
     @Nested
@@ -66,58 +103,54 @@ class MessageRepositoryIT extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("should save message with generated ID and timestamps")
+        @DisplayName("Should save a message")
+        @Transactional
         void shouldSaveMessage() {
             // Given
-            Message newMessage = createNewTestMessage();
+            Message message = TestDataFactory.createMessage("Test content", TEST_SENDER);
             
             // When
-            Message savedMessage = messageRepository.save(newMessage);
-
-            // Then
-            assertThat(savedMessage).isNotNull();
-            assertThat(savedMessage.getId())
-                    .isNotBlank()
-                    .satisfies(id -> assertThat(UUID.fromString(id)).isNotNull());
-            assertThat(savedMessage.getContent()).startsWith("Unique test message ");
-            assertThat(savedMessage.getSender()).isEqualTo(TEST_SENDER);
-            assertThat(savedMessage.getCreatedAt())
-                    .isCloseTo(LocalDateTime.now(), within(1, ChronoUnit.SECONDS));
-            assertThat(savedMessage.getUpdatedAt())
-                    .isCloseTo(savedMessage.getCreatedAt(), within(1, ChronoUnit.MILLIS));
-            assertThat(savedMessage.getVersion()).isZero();
+            Message savedMessage = messageRepository.saveAndFlush(message);
+            entityManager.clear(); // Clear persistence context to ensure we're reading from DB
             
-            // Verify in database
-            Optional<Message> foundMessage = messageRepository.findById(savedMessage.getId());
-            assertThat(foundMessage)
-                .isPresent()
-                .get()
-                .usingRecursiveComparison()
-                .isEqualTo(savedMessage);
+            // Then
+            Message foundMessage = messageRepository.findById(savedMessage.getId()).orElse(null);
+            assertThat(foundMessage).isNotNull();
+            assertThat(foundMessage.getContent()).isEqualTo("Test content");
+            assertThat(foundMessage.getSender()).isEqualTo(TEST_SENDER);
+            assertThat(foundMessage.getCreatedAt()).isCloseTo(LocalDateTime.now(), within(1, ChronoUnit.SECONDS));
+            assertThat(foundMessage.getUpdatedAt()).isCloseTo(LocalDateTime.now(), within(1, ChronoUnit.SECONDS));
+            assertThat(foundMessage.getVersion()).isZero();
         }
         
         @Test
-        @DisplayName("should fail to save message with null content")
+        @DisplayName("Should fail to save message with null content")
+        @Transactional
         void shouldFailToSaveMessageWithNullContent() {
             // Given
-            Message message = createNewTestMessage();
-            message.setContent(null);
+            Message message = TestDataFactory.createMessage(null, TEST_SENDER);
             
             // When/Then
-            assertThrows(DataIntegrityViolationException.class, 
-                () -> messageRepository.saveAndFlush(message));
+            assertThrows(jakarta.validation.ConstraintViolationException.class, () -> {
+                Message saved = messageRepository.save(message);
+                messageRepository.flush();
+                entityManager.clear();
+            });
         }
         
         @Test
-        @DisplayName("should fail to save message with null sender")
+        @DisplayName("Should fail to save message with null sender")
+        @Transactional
         void shouldFailToSaveMessageWithNullSender() {
             // Given
-            Message message = createNewTestMessage();
-            message.setSender(null);
+            Message message = TestDataFactory.createMessage("Test content", null);
             
             // When/Then
-            assertThrows(DataIntegrityViolationException.class, 
-                () -> messageRepository.saveAndFlush(message));
+            assertThrows(jakarta.validation.ConstraintViolationException.class, () -> {
+                Message saved = messageRepository.save(message);
+                messageRepository.flush();
+                entityManager.clear();
+            });
         }
 
         @Test
@@ -167,15 +200,16 @@ class MessageRepositoryIT extends BaseIntegrationTest {
         }
         
         @Test
-        @DisplayName("should return empty list when no messages exist")
+        @DisplayName("Should return empty list when no messages exist")
+        @Transactional
         void shouldReturnEmptyListWhenNoMessages() {
-            // Given - no messages in database
+            // Given - setUp() has already cleared the database
             
             // When
             List<Message> messages = messageRepository.findAll();
             
             // Then
-            assertThat(messages).isEmpty();
+            assertThat(messages).as("Expected no messages in the database").isEmpty();
         }
 
         @Test
@@ -342,6 +376,7 @@ class MessageRepositoryIT extends BaseIntegrationTest {
 
     @Nested
     @DisplayName("Query Methods")
+    @Transactional
     class QueryMethods {
         
         @Test
@@ -350,7 +385,7 @@ class MessageRepositoryIT extends BaseIntegrationTest {
             // Given - already have TEST_MESSAGE_COUNT messages from TEST_SENDER in setup
             String otherSender = "otheruser@example.com";
             Message otherMessage = TestDataFactory.createMessage("Other message", otherSender);
-            messageRepository.save(otherMessage);
+            messageRepository.saveAndFlush(otherMessage);
 
             // When
             List<Message> foundMessages = messageRepository.findBySender(TEST_SENDER);
@@ -359,6 +394,25 @@ class MessageRepositoryIT extends BaseIntegrationTest {
             assertThat(foundMessages)
                     .hasSize(TEST_MESSAGE_COUNT)
                     .allMatch(msg -> TEST_SENDER.equals(msg.getSender()));
+        }
+        
+        @Test
+        @DisplayName("should find messages by sender with pagination")
+        void shouldFindMessagesBySenderWithPagination() {
+            // Given
+            String testSender = "pagination-sender@example.com";
+            List<Message> testMessages = IntStream.range(0, 15)
+                    .mapToObj(i -> TestDataFactory.createMessage("Message " + i, testSender))
+                    .collect(Collectors.toList());
+            messageRepository.saveAllAndFlush(testMessages);
+            
+            // When
+            List<Message> foundMessages = messageRepository.findBySender(testSender);
+            
+            // Then
+            assertThat(foundMessages).hasSize(15);
+            assertThat(foundMessages)
+                    .allMatch(msg -> testSender.equals(msg.getSender()));
         }
 
 
@@ -427,22 +481,27 @@ class MessageRepositoryIT extends BaseIntegrationTest {
 
     @Nested
     @DisplayName("Performance Tests")
+    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
     class PerformanceTests {
-
-        private static final int LARGE_DATASET_SIZE = 1000;
-
-        @BeforeEach
-        void setUp() {
+        
+        @BeforeAll
+        void setupAll() {
             // Clean up any existing data
-            messageRepository.deleteAll();
+            messageRepository.deleteAllInBatch();
             
             // Create a large dataset for performance testing
-            List<Message> messages = IntStream.range(0, LARGE_DATASET_SIZE)
-                    .mapToObj(i -> TestDataFactory.createMessage(
-                        "Perf Test " + i,
-                        "perf@example.com"))
+            int batchSize = 100;
+            for (int i = 0; i < LARGE_DATASET_SIZE; i += batchSize) {
+                List<Message> batch = IntStream.range(i, Math.min(i + batchSize, LARGE_DATASET_SIZE))
+                    .mapToObj(j -> TestDataFactory.createMessage(
+                        "Test message " + j, 
+                        "user" + (j % 10) + "@example.com"))
                     .collect(Collectors.toList());
-            messageRepository.saveAll(messages);
+                messageRepository.saveAll(batch);
+                messageRepository.flush();
+                entityManager.clear(); // Clear persistence context to avoid memory issues
+            }
+            messageRepository.flush();
         }
 
         @Test

@@ -15,6 +15,9 @@ import java.util.List;
 public interface MessageRepository extends JpaRepository<Message, String>, JpaSpecificationExecutor<Message> {
     List<Message> findBySender(String sender);
     
+    @Query("SELECT m FROM Message m WHERE m.sender = :sender")
+    Page<Message> findBySender(@Param("sender") String sender, Pageable pageable);
+    
     @Query("SELECT m FROM Message m WHERE LOWER(m.content) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     List<Message> findByContentContainingIgnoreCase(@Param("searchTerm") String searchTerm);
     
