@@ -1,6 +1,6 @@
 # CodePipeline MCP Java Spring OAuth2
 
-A professional Java Spring Boot microservice with OAuth2 authentication and WebSocket real-time capabilities following MCP (Model Context Protocol) design principles.
+A professional Java Spring Boot microservice with OAuth2 authentication and WebSocket capabilities following MCP (Model Context Protocol) design principles.
 
 [![Java CI](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/maven.yml/badge.svg)](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/maven.yml)
 [![CodeQL](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/codeql-analysis.yml)
@@ -27,6 +27,179 @@ A professional Java Spring Boot microservice with OAuth2 authentication and WebS
   - Implemented comprehensive test cases for all CRUD operations
   - Added test coverage for custom repository methods
   - Improved test reliability with proper container lifecycle management
+
+## 📋 ISPW API Implementation
+
+### Overview
+This service implements the ISPW API specification, providing endpoints for managing assignments, tasks, releases, and release sets. The implementation follows RESTful principles and includes comprehensive error handling, validation, and security.
+
+### API Endpoints
+
+#### Assignment Management
+```mermaid
+graph TD
+    A[GET /api/assignments] --> B[List Assignments]
+    B --> C[Filter by status/application]
+    D[POST /api/assignments] --> E[Create Assignment]
+    E --> F[Validate input]
+    G[GET /api/assignments/{id}] --> H[Get Assignment Details]
+    H --> I[Include tasks]
+    J[PUT /api/assignments/{id}] --> K[Update Assignment]
+    K --> L[Validate ownership]
+    M[DELETE /api/assignments/{id}] --> N[Delete Assignment]
+    N --> O[Cascade delete tasks]
+```
+
+#### Task Management
+```mermaid
+graph TD
+    A[GET /api/assignments/{id}/tasks] --> B[List Tasks]
+    B --> C[Filter by status]
+    D[POST /api/assignments/{id}/tasks] --> E[Create Task]
+    E --> F[Validate assignment exists]
+    G[PUT /api/tasks/{id}] --> H[Update Task]
+    H --> I[Check permissions]
+    J[DELETE /api/tasks/{id}] --> K[Delete Task]
+    K --> L[Update assignment status]
+```
+
+#### Release Management
+```mermaid
+graph TD
+    A[GET /api/releases] --> B[List Releases]
+    B --> C[Filter by application/status]
+    D[POST /api/releases] --> E[Create Release]
+    E --> F[Validate input]
+    G[GET /api/releases/{id}] --> H[Get Release Details]
+    H --> I[Include release sets]
+    J[PUT /api/releases/{id}] --> K[Update Release]
+    K --> L[Validate ownership]
+    M[DELETE /api/releases/{id}] --> N[Delete Release]
+    N --> O[Cascade delete sets]
+```
+
+#### Release Set Management
+```mermaid
+graph TD
+    A[POST /api/releases/{id}/sets] --> B[Create Release Set]
+    B --> C[Validate release exists]
+    D[GET /api/releases/{id}/sets/{setId}] --> E[Get Set Details]
+    E --> F[Include deployment history]
+    G[PUT /api/releases/{id}/sets/{setId}] --> H[Update Set]
+    H --> I[Validate status transition]
+    J[POST /api/releases/{id}/sets/{setId}/deploy] --> K[Deploy Set]
+    K --> L[Trigger deployment workflow]
+```
+
+### Data Model
+
+```mermaid
+erDiagram
+    ASSIGNMENT ||--o{ TASK : has
+    ASSIGNMENT {
+        String id PK
+        String title
+        String description
+        String status
+        String owner
+        LocalDateTime dueDate
+    }
+    
+    TASK {
+        String id PK
+        String title
+        String description
+        String status
+        String assignee
+        LocalDateTime dueDate
+        String assignmentId FK
+    }
+    
+    RELEASE ||--o{ RELEASE_SET : contains
+    RELEASE {
+        String id PK
+        String name
+        String application
+        String status
+        String owner
+        LocalDateTime targetDate
+    }
+    
+    RELEASE_SET {
+        String id PK
+        String name
+        String status
+        String owner
+        String description
+        String releaseId FK
+        LocalDateTime deployedAt
+        String deployedBy
+    }
+```
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Application
+    participant K as Keycloak
+    
+    C->>K: 1. Request Access Token (Client Credentials/Password)
+    K-->>C: 2. JWT Token
+    C->>A: 3. API Request with JWT
+    A->>K: 4. Validate Token
+    K-->>A: 5. Token Info (Roles/Permissions)
+    A-->>C: 6. Response
+    
+    Note over C,A: All endpoints require valid JWT token
+    Note over C,A: Admin role required for write operations
+```
+
+### Error Handling
+
+The API returns appropriate HTTP status codes and error messages in the following format:
+
+```json
+{
+    "timestamp": "2025-06-05T19:45:30.123456Z",
+    "status": 404,
+    "error": "Not Found",
+    "message": "Release not found with id: 123",
+    "path": "/api/releases/123"
+}
+```
+
+Common error responses include:
+- `400 Bad Request`: Invalid input data
+- `401 Unauthorized`: Missing or invalid authentication
+- `403 Forbidden`: Insufficient permissions
+- `404 Not Found`: Resource not found
+- `409 Conflict`: Resource conflict (e.g., duplicate name)
+- `500 Internal Server Error`: Server-side error
+
+### Rate Limiting
+
+All endpoints are protected by rate limiting:
+- 100 requests per minute per authenticated user
+- 1000 requests per minute per IP for public endpoints
+
+### Monitoring
+
+All endpoints are instrumented for monitoring:
+- Request/response metrics
+- Error rates
+- Response times
+- Active connections
+
+### Security Headers
+
+All responses include security headers:
+- `Content-Security-Policy`
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+- `Strict-Transport-Security: max-age=31536000 ; includeSubDomains`
 
 ## 🏗️ System Architecture
 
