@@ -17,13 +17,16 @@ A professional Java Spring Boot microservice with OAuth2 authentication and WebS
   - Added proper cleanup in test cases
   - Fixed version handling in update operations
 
-- Infrastructure & Testing
+- **Infrastructure & Testing**
   - Upgraded to **Testcontainers 1.19.7** for better Java 17 compatibility
-  - Improved test reliability with **@DataJpaTest** and proper transaction management
-  - Enhanced test isolation with **Testcontainers PostgreSQL**
-  - Added comprehensive integration tests for the Message repository
-  - Improved test performance with container reuse
-  - Added detailed logging for test execution
+  - Added **PostgreSQL Testcontainers** integration for reliable database testing
+  - Implemented comprehensive **MessageRepository** integration tests with real database
+  - Added **BasePostgresRepositoryTest** for consistent test setup
+  - Improved test isolation with **@DataJpaTest** and proper transaction management
+  - Added **PostgresTestConfig** for container configuration
+  - Implemented comprehensive test cases for all CRUD operations
+  - Added test coverage for custom repository methods
+  - Improved test reliability with proper container lifecycle management
 
 ## 🏗️ System Architecture
 
@@ -124,10 +127,14 @@ sequenceDiagram
   - **Distributed tracing**
 
 - **Testing**
-  - **JUnit 5**
-  - **TestContainers** for integration testing
+  - **JUnit 5** for unit and integration testing
+  - **TestContainers** for integration testing with real databases
+  - **PostgreSQL Testcontainers** for reliable database testing
+  - **@DataJpaTest** for repository layer testing
   - **MockMVC** for controller testing
-  - **Test coverage** reports
+  - **Test coverage** reports with JaCoCo
+  - **Test profiles** for different environments
+  - **Container reuse** for faster test execution
 
 ## 🛠️ Prerequisites
 
@@ -157,6 +164,47 @@ sequenceDiagram
   - [Postman](https://www.postman.com/)
   - [cURL](https://curl.se/)
   - [httpie](https://httpie.io/)
+
+## 🧪 Running Tests
+
+### Unit Tests
+
+```bash
+# Run all unit tests
+./mvnw test
+
+# Run a specific test class
+./mvnw test -Dtest=MessageServiceTest
+```
+
+### Integration Tests with Testcontainers
+
+The project includes integration tests that use **Testcontainers** to spin up a real PostgreSQL database in a Docker container:
+
+```bash
+# Run all integration tests
+./mvnw verify -DskipUnitTests=true -DskipITs=false
+
+# Run a specific integration test
+./mvnw test -Dtest=MessageRepositoryPostgresIT
+
+# Run with test logging
+./mvnw test -Dtest=MessageRepositoryPostgresIT -Dlogging.level.com.codepipeline=DEBUG
+```
+
+### Test Configuration
+
+Integration tests are configured to use:
+- **PostgreSQL 14** in a Docker container
+- **Flyway** for database migrations
+- **Testcontainers** for container management
+- **@DataJpaTest** for repository testing
+
+### Test Reports
+
+After running tests, you can find the reports at:
+- Test reports: `target/surefire-reports/`
+- Coverage reports: `target/site/jacoco/` (run `mvn jacoco:report` first)
 
 ## 🚀 Getting Started
 
