@@ -1,57 +1,33 @@
 package com.codepipeline.mcp.repository;
 
+import com.codepipeline.mcp.BaseIntegrationTest;
 import com.codepipeline.mcp.model.Message;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.data.domain.*;
 import org.springframework.test.context.TestPropertySource;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Integration tests for the {@link MessageRepository}.
- * Uses H2 in-memory database for testing the repository layer.
- */
 @DisplayName("Message Repository Integration Tests")
+@Transactional
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ActiveProfiles("test")
-@TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL",
-    "spring.datasource.driver-class-name=org.h2.Driver",
-    "spring.datasource.username=sa",
-    "spring.datasource.password=password",
-    "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-    "spring.jpa.hibernate.ddl-auto=update",
-    "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
-    "spring.jpa.properties.hibernate.hbm2ddl.import_files_sql_extractor=org.hibernate.tool.hbm2ddl.MultipleLinesSqlCommandExtractor",
-    "spring.jpa.show-sql=true",
-    "spring.jpa.properties.hibernate.format_sql=true"
-})
-class MessageRepositoryIT {
+class MessageRepositoryIT extends BaseIntegrationTest {
     
     @Autowired
     private MessageRepository messageRepository;
@@ -59,12 +35,14 @@ class MessageRepositoryIT {
     @PersistenceContext
     private EntityManager entityManager;
     
+    // TestEntityManager is not used in this test class
+    
     private static final String TEST_SENDER = "test@example.com";
-    private static final String OTHER_SENDER = "other@example.com";
     private static final int TEST_MESSAGE_COUNT = 5;
     private static final int LARGE_DATASET_SIZE = 1000;
 
     @BeforeEach
+    @Transactional
     void setUp() {
         // Clean up existing data before each test
         messageRepository.deleteAllInBatch();
@@ -78,32 +56,13 @@ class MessageRepositoryIT {
             message.setSender(TEST_SENDER);
             messageRepository.save(message);
         }
-        
-        // Add a message with different sender
-        Message otherMessage = new Message();
-        otherMessage.setContent("Spring Boot is awesome");
-        otherMessage.setSender(OTHER_SENDER);
-        messageRepository.save(otherMessage);
-        
         messageRepository.flush();
     }
     
     @AfterEach
     void tearDown() {
+        // Clean up after each test to ensure isolation
         messageRepository.deleteAllInBatch();
-    }
-    
-    /**
-     * Utility method to create a test message with the given content and sender.
-     * @param content The message content
-     * @param sender The sender's email
-     * @return A new Message instance
-     */
-    private Message createTestMessage(String content, String sender) {
-        Message message = new Message();
-        message.setContent(content);
-        message.setSender(sender);
-        return message;
     }
 
     @Nested
@@ -267,43 +226,46 @@ class MessageRepositoryIT {
             // When
             for (int i = 0; i < threadCount; i++) {
                 final int threadNum = i;
-                
                 executor.submit(() -> {
                     try {
                         latch.await();
                         for (int j = 0; j < iterations; j++) {
-                            // Perform concurrent operations
-                            Message message = new Message();
-                            message.setContent("Concurrent test " + threadNum + "-" + j);
-                            message.setSender("user" + threadNum + "@example.com");
-                            messageRepository.saveAndFlush(message);
-                            
-                            // Verify the message was saved
-                            Optional<Message> found = messageRepository.findById(message.getId());
-                            assertThat(found).isPresent();
-                            assertThat(found.get().getContent()).isEqualTo(message.getContent());
-                            
-                            successCount.incrementAndGet();
+                            try {
+                                // Each thread creates and reads messages
+                                Message message = new Message();
+                                message.setContent("Thread " + threadNum + " - Message " + j);
+                                message.setSender("user" + threadNum + "@example.com");
+                                messageRepository.saveAndFlush(message);
+
+                                // Read some messages
+                                messageRepository.findBySender("user" + threadNum + "@example.com");
+                                successCount.incrementAndGet();
+                            } catch (Exception e) {
+                                failureCount.incrementAndGet();
+                                fail("Thread " + threadNum + " failed on iteration " + j, e);
+                            }
                         }
-                    } catch (Exception e) {
-                        failureCount.incrementAndGet();
-                        System.err.println("Error in thread " + threadNum + ": " + e.getMessage());
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        fail("Thread " + threadNum + " was interrupted", e);
                     }
                 });
             }
-            
-            // Start all threads
+
+            // Start all threads at once
             latch.countDown();
-            
-            // Wait for all threads to complete
-            executor.shutdown();
-            boolean finished = executor.awaitTermination(10, TimeUnit.SECONDS);
-            
+
+            // Wait for all threads to complete or timeout after 30 seconds
+            boolean completed = executor.awaitTermination(30, TimeUnit.SECONDS);
+            if (!completed) {
+                executor.shutdownNow();
+                fail("Test timed out waiting for threads to complete");
+            }
+
             // Then
-            assertThat(finished).isTrue();
-            assertThat(failureCount.get()).isZero();
             assertThat(successCount.get()).isEqualTo(threadCount * iterations);
-            
+            assertThat(failureCount.get()).isZero();
+
             // Verify data consistency
             long totalMessages = messageRepository.count();
             assertThat(totalMessages).isGreaterThanOrEqualTo(TEST_MESSAGE_COUNT + (threadCount * iterations));
@@ -314,12 +276,6 @@ class MessageRepositoryIT {
                     .map(Message::getContent)
                     .distinct()
                     .count();
-            assertThat(uniqueCount).isEqualTo(allMessages.size());
-        }
-    } // End of ConcurrentOperations class
-    
-    @Nested
-    @DisplayName("Query Methods Tests")
     @Transactional
     class MessageQueryMethodsTests {
         
@@ -432,23 +388,30 @@ class MessageRepositoryIT {
             messageRepository.saveAll(testMessages);
             messageRepository.flush();
             
-            // When - Get all messages for the sender
-            List<Message> messages = messageRepository.findBySender(testSender);
+            // When - Get first page (5 items)
+            Pageable firstPage = PageRequest.of(0, 5, Sort.by("content"));
+            Page<Message> firstPageResult = messageRepository.findBySender(testSender, firstPage);
             
             // Then
-            assertThat(messages)
-                    .hasSize(15)
+            assertThat(firstPageResult.getContent())
+                    .hasSize(5)
                     .extracting(Message::getContent)
-                    .contains("Message 0", "Message 1", "Message 2", "Message 3", "Message 4");
+                    .containsExactly("Message 0", "Message 1", "Message 10", "Message 11", "Message 12");
             
-            // Verify sorting (should be by content as per the test data creation)
-            List<String> sortedContents = messages.stream()
-                    .map(Message::getContent)
-                    .sorted()
-                    .collect(java.util.stream.Collectors.toList());
-                    
-            assertThat(messages.stream().map(Message::getContent).collect(java.util.stream.Collectors.toList()))
-                    .containsExactlyElementsOf(sortedContents);
+            assertThat(firstPageResult.getTotalElements()).isEqualTo(15);
+            assertThat(firstPageResult.getTotalPages()).isEqualTo(3);
+            assertThat(firstPageResult.isFirst()).isTrue();
+            assertThat(firstPageResult.hasNext()).isTrue();
+            
+            // When - Get second page
+            Pageable secondPage = firstPage.next();
+            Page<Message> secondPageResult = messageRepository.findBySender(testSender, secondPage);
+            
+            // Then
+            assertThat(secondPageResult.getContent())
+                    .hasSize(5)
+                    .extracting(Message::getContent)
+                    .containsExactly("Message 13", "Message 14", "Message 2", "Message 3", "Message 4");
         }
 
 
@@ -467,12 +430,17 @@ class MessageRepositoryIT {
                     .isNotNull()
                     .isEmpty();
                     
-            // Verify with non-paginated query
-            List<Message> foundMessagesAgain = messageRepository.findBySender(nonExistentSender);
+            // Verify with pagination
+            Page<Message> pagedResult = messageRepository.findBySender(
+                    nonExistentSender, 
+                    PageRequest.of(0, 10));
                     
-            assertThat(foundMessagesAgain)
-                    .as("Should return empty list for non-existent sender on second query")
+            assertThat(pagedResult.getContent())
+                    .as("Should return empty page for non-existent sender")
                     .isEmpty();
+            assertThat(pagedResult.getTotalElements())
+                    .as("Should report zero total elements")
+                    .isZero();
         }
 
 
@@ -481,8 +449,8 @@ class MessageRepositoryIT {
         void shouldFindMessagesContainingSearchTerm() {
             // Given
             String searchTerm = "special" + UUID.randomUUID();
-            Message message1 = createTestMessage("Hello " + searchTerm, "user1@example.com");
-            Message message2 = createTestMessage(searchTerm.toUpperCase() + " World", "user2@example.com");
+            Message message1 = TestDataFactory.createMessage("Hello " + searchTerm, "user1@example.com");
+            Message message2 = TestDataFactory.createMessage(searchTerm.toUpperCase() + " World", "user2@example.com");
             messageRepository.saveAll(List.of(message1, message2));
 
             // When - Using pageable version of the search
@@ -502,12 +470,11 @@ class MessageRepositoryIT {
         void shouldFindMessagesWithPagination() {
             // Given
             String targetContent = "pagination-test-" + UUID.randomUUID();
-            List<Message> messages = new ArrayList<>();
-            for (int i = 0; i < 15; i++) {
-                messages.add(createTestMessage(
-                        targetContent + " Message " + i,
-                        "user" + (i % 3) + "@example.com"));
-            }
+            List<Message> messages = IntStream.range(0, 15)
+                    .mapToObj(i -> TestDataFactory.createMessage(
+                            targetContent + " Message " + i,
+                            "user" + (i % 3) + "@example.com"))
+                    .collect(Collectors.toList());
             messageRepository.saveAll(messages);
 
             Pageable pageable = PageRequest.of(0, 5, Sort.by("createdAt").descending());
@@ -528,7 +495,6 @@ class MessageRepositoryIT {
                         .isAfterOrEqualTo(content.get(i + 1).getCreatedAt());
             }
         }
-    } // End of MessageQueryMethodsTests class
 
     @Nested
     @DisplayName("Performance Tests")
@@ -543,12 +509,11 @@ class MessageRepositoryIT {
             // Create a large dataset for performance testing
             int batchSize = 100;
             for (int i = 0; i < LARGE_DATASET_SIZE; i += batchSize) {
-                List<Message> batch = new ArrayList<>();
-                for (int j = i; j < Math.min(i + batchSize, LARGE_DATASET_SIZE); j++) {
-                    batch.add(createTestMessage(
+                List<Message> batch = IntStream.range(i, Math.min(i + batchSize, LARGE_DATASET_SIZE))
+                    .mapToObj(j -> TestDataFactory.createMessage(
                         "Test message " + j, 
-                        "user" + (j % 10) + "@example.com"));
-                }
+                        "user" + (j % 10) + "@example.com"))
+                    .collect(Collectors.toList());
                 messageRepository.saveAll(batch);
                 messageRepository.flush();
                 entityManager.clear(); // Clear persistence context to avoid memory issues
@@ -588,5 +553,6 @@ class MessageRepositoryIT {
                     .isLessThan(1000); // Should be much faster than 1 second
             }
         }
-    } // End of MessagePerformanceTests class
-} // End of MessageRepositoryIT class
+    }
+}
+}

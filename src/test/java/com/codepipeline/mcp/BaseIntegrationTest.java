@@ -16,6 +16,11 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
 
+/**
+ * Base class for integration tests that require a PostgreSQL database.
+ * Starts a single PostgreSQL container that can be reused across test classes.
+ */
+
 @Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -38,8 +43,7 @@ public abstract class BaseIntegrationTest {
             .withLogConsumer(new Slf4jLogConsumer(log).withPrefix("POSTGRES"))
             .withStartupTimeout(Duration.ofSeconds(120))
             .waitingFor(Wait.forListeningPort()
-                .withStartupTimeout(Duration.ofSeconds(30)))
-            .withReuse(true);
+                .withStartupTimeout(Duration.ofSeconds(30)));
 
     @DynamicPropertySource
     static void postgresqlProperties(DynamicPropertyRegistry registry) {
@@ -48,24 +52,33 @@ public abstract class BaseIntegrationTest {
             return;
         }
         
-        String jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s",
+        // Configure the JDBC URL with the mapped port
+        String jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s?currentSchema=public",
             postgreSQLContainer.getHost(),
             postgreSQLContainer.getMappedPort(POSTGRES_PORT),
             TEST_DB_NAME);
             
         log.info("Configuring test datasource: {}", jdbcUrl);
         
+        // Configure the test database
         registry.add("spring.datasource.url", () -> jdbcUrl);
         registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
         registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         
-        // Hibernate properties
+        // JPA/Hibernate properties
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "update");
         registry.add("spring.jpa.properties.hibernate.dialect", 
             () -> "org.hibernate.dialect.PostgreSQLDialect");
-        
+        registry.add("spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation", 
+            () -> "true");
+            
         // Test properties
         registry.add("spring.test.database.replace", () -> "none");
+        registry.add("spring.flyway.enabled", () -> "false");
+        
+        // Log the configuration
+        log.info("Test database configured with URL: {}", jdbcUrl);
     }
 
     @BeforeAll
