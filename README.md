@@ -8,14 +8,22 @@ A professional Java Spring Boot microservice with OAuth2 authentication and WebS
 
 ## 🚀 Recent Updates
 
-- Upgraded to **Testcontainers 1.19.7** for better Java 17 compatibility
-- Improved test reliability with **@DataJpaTest** and proper transaction management
-- Enhanced test isolation with **Testcontainers PostgreSQL**
-- Added comprehensive integration tests for the Message repository
-- Fixed validation exception handling in message creation
-- Added proper test cleanup and transaction management
-- Improved test performance with container reuse
-- Added detailed logging for test execution
+- **Enhanced Message Service**
+  - Added input validation for message creation (null/empty checks for content and sender)
+  - Improved error messages for validation failures
+  - Fixed concurrency issues in message deletion
+  - Added comprehensive test coverage for all service methods
+  - Improved test reliability and isolation
+  - Added proper cleanup in test cases
+  - Fixed version handling in update operations
+
+- Infrastructure & Testing
+  - Upgraded to **Testcontainers 1.19.7** for better Java 17 compatibility
+  - Improved test reliability with **@DataJpaTest** and proper transaction management
+  - Enhanced test isolation with **Testcontainers PostgreSQL**
+  - Added comprehensive integration tests for the Message repository
+  - Improved test performance with container reuse
+  - Added detailed logging for test execution
 
 ## 🏗️ System Architecture
 
