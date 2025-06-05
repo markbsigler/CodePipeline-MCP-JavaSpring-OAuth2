@@ -2,6 +2,21 @@
 
 A professional Java Spring Boot microservice with OAuth2 authentication and WebSocket real-time capabilities following MCP (Model Context Protocol) design principles.
 
+[![Java CI](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/maven.yml/badge.svg)](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/maven.yml)
+[![CodeQL](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/codeql-analysis.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## 🚀 Recent Updates
+
+- Upgraded to **Testcontainers 1.19.7** for better Java 17 compatibility
+- Improved test reliability with **@DataJpaTest** and proper transaction management
+- Enhanced test isolation with **Testcontainers PostgreSQL**
+- Added comprehensive integration tests for the Message repository
+- Fixed validation exception handling in message creation
+- Added proper test cleanup and transaction management
+- Improved test performance with container reuse
+- Added detailed logging for test execution
+
 ## 🏗️ System Architecture
 
 ### High-Level Architecture
@@ -109,8 +124,9 @@ sequenceDiagram
 ## 🛠️ Prerequisites
 
 - **Java Development Kit (JDK) 17** or later
-  - [Download OpenJDK 17](https://adoptium.net/)
+  - [Download Eclipse Temurin JDK 17](https://adoptium.net/)
   - Verify: `java -version`
+  - Required for Java 17 language features and modules
 
 - **Maven 3.9+** or **Gradle 8+**
   - [Install Maven](https://maven.apache.org/install.html)
@@ -140,7 +156,13 @@ sequenceDiagram
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/CodePipeline-MCP-JavaSpring-OAuth2.git
+   git clone https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2.git
+   cd CodePipeline-MCP-JavaSpring-OAuth2
+   ```
+   
+   Or using SSH:
+   ```bash
+   git clone git@github.com:markbsigler/CodePipeline-MCP-JavaSpring-OAuth2.git
    cd CodePipeline-MCP-JavaSpring-OAuth2
    ```
 
@@ -186,22 +208,62 @@ sequenceDiagram
      - Password: `password`
      - Roles: `ROLE_USER`
 
-### Testing the Application
+### 🧪 Testing the Application
 
-1. **Run unit tests**
+#### Running Tests
+
+1. **Run all tests**
    ```bash
-   ./mvnw test
+   ./mvnw clean test
    ```
 
-2. **Run integration tests**
+2. **Run integration tests with Testcontainers**
    ```bash
-   ./mvnw verify -Pintegration-test
+   # Make sure Docker is running
+   docker --version
+   
+   # Run integration tests
+   ./mvnw test -Dtest=*IT
    ```
 
-3. **Generate test coverage report**
+3. **Run a specific test class**
+   ```bash
+   ./mvnw test -Dtest=MessageRepositoryIT
+   ```
+
+4. **Run a specific test method**
+   ```bash
+   ./mvnw test -Dtest=MessageRepositoryIT#shouldSaveMessage
+   ```
+
+5. **Generate test coverage report**
+   ```bash
+   ./mvnw clean verify
+   # Report will be available at: target/site/jacoco/index.html
+   ```
+
+#### Test Configuration
+
+- Tests use **Testcontainers** with **PostgreSQL 14**
+- Test data is automatically cleaned up between tests
+- Database schema is managed by **Hibernate** in test profile
+- Tests run with **JUnit 5** and **AssertJ** for assertions
+
+#### Test Profiles
+
+- `test`: Default profile for unit tests (in-memory H2 database)
+- `itest`: Integration test profile (PostgreSQL Testcontainer)
+
+To run with a specific profile:
+```bash
+./mvnw test -Pitest
+```
+
+6. **Generate JaCoCo coverage report**
    ```bash
    ./mvnw jacoco:report
    # Open target/site/jacoco/index.html in browser
+   ```
    ```
 
 ## 📚 API Documentation
