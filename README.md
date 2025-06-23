@@ -6,6 +6,49 @@ A professional Java Spring Boot microservice with OAuth2 authentication and WebS
 [![CodeQL](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2/actions/workflows/codeql-analysis.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## 📑 Table of Contents
+
+- [Quick Start](#-quick-start)
+- [Features](#-features)
+- [System Architecture](#-system-architecture)
+- [API Documentation](#api-documentation)
+- [Configuration](#-configuration)
+- [Testing](#testing)
+- [Deployment](#-deployment)
+- [Security](#-security)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Acknowledgments](#-acknowledgments)
+
+## 🚀 Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/markbsigler/CodePipeline-MCP-JavaSpring-OAuth2.git
+   cd CodePipeline-MCP-JavaSpring-OAuth2
+   ```
+
+2. **Start dependencies**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Import Keycloak realm**
+   - Go to [Keycloak Admin Console](http://localhost:8081/)
+   - Login: `admin` / `admin`
+   - Import: `keycloak/realm-export.json`
+
+4. **Run the app**
+   ```bash
+   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+   ```
+
+5. **Access API**
+   - [Swagger UI](http://localhost:8080/api/swagger-ui.html)
+   - [API Base URL](http://localhost:8080/api)
+
+---
+
 ## 🚀 Recent Updates
 
 - **Enhanced Message Service**
@@ -830,4 +873,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Keycloak](https://www.keycloak.org/)
 - [Docker](https://www.docker.com/)
 - [Kubernetes](https://kubernetes.io/)
- CodePipeline-MCP-JavaSpring-OAuth2
