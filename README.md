@@ -381,46 +381,32 @@ sequenceDiagram
   - [cURL](https://curl.se/)
   - [httpie](https://httpie.io/)
 
-## 🧪 Running Tests
+## 🧪 Testing
 
 ### Unit Tests
 
+Run all unit tests:
 ```bash
-# Run all unit tests
 ./mvnw test
-
-# Run a specific test class
-./mvnw test -Dtest=MessageServiceTest
 ```
 
-### Integration Tests with Testcontainers
+### Integration Tests
 
-The project includes integration tests that use **Testcontainers** to spin up a real PostgreSQL database in a Docker container:
+Integration tests require Docker (for Testcontainers). If Docker is not available, these tests will be skipped automatically.
 
+Run integration tests:
 ```bash
-# Run all integration tests
-./mvnw verify -DskipUnitTests=true -DskipITs=false
-
-# Run a specific integration test
-./mvnw test -Dtest=MessageRepositoryPostgresIT
-
-# Run with test logging
-./mvnw test -Dtest=MessageRepositoryPostgresIT -Dlogging.level.com.codepipeline=DEBUG
+./mvnw verify -Pintegration-test
 ```
 
-### Test Configuration
+- Integration tests use H2 in PostgreSQL mode by default, but some tests may use Testcontainers for a real PostgreSQL instance.
+- Test data is isolated and rolled back after each test using `@Transactional`.
+- Test reliability is improved by parameterized tests and Docker availability checks.
 
-Integration tests are configured to use:
-- **PostgreSQL 14** in a Docker container
-- **Flyway** for database migrations
-- **Testcontainers** for container management
-- **@DataJpaTest** for repository testing
-
-### Test Reports
-
-After running tests, you can find the reports at:
-- Test reports: `target/surefire-reports/`
-- Coverage reports: `target/site/jacoco/` (run `mvn jacoco:report` first)
+### Test Reliability Features
+- **Automatic rollback**: All tests are transactional and roll back changes after each test.
+- **Docker check**: Integration tests that require Docker will be skipped if Docker is not available.
+- **Parameterized tests**: Repeated validation scenarios are covered with parameterized tests for maintainability and coverage.
 
 ## 🚀 Getting Started
 
@@ -535,7 +521,6 @@ To run with a specific profile:
    ```bash
    ./mvnw jacoco:report
    # Open target/site/jacoco/index.html in browser
-   ```
    ```
 
 ## 📚 API Documentation

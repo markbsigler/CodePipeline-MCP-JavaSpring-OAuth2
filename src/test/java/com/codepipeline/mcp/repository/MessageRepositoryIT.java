@@ -51,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.*;
     "spring.jpa.show-sql=true",
     "spring.jpa.properties.hibernate.format_sql=true"
 })
+@Transactional
 class MessageRepositoryIT {
     
     @Autowired
@@ -104,6 +105,24 @@ class MessageRepositoryIT {
         message.setContent(content);
         message.setSender(sender);
         return message;
+    }
+
+    /**
+     * Utility method to check if Docker is available for Testcontainers-based tests.
+     */
+    public static boolean isDockerAvailable() {
+        try {
+            Process process = new ProcessBuilder("docker", "info").start();
+            int exitCode = process.waitFor();
+            return exitCode == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @BeforeAll
+    static void checkDockerAvailability() {
+        Assumptions.assumeTrue(isDockerAvailable(), "Docker is not available. Skipping Testcontainers-based tests.");
     }
 
     @Nested
