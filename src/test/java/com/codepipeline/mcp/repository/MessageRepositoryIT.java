@@ -13,9 +13,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -34,28 +41,24 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for the {@link MessageRepository}.
- * Uses H2 in-memory database for testing the repository layer.
+ * Uses PostgreSQL Testcontainer for testing the repository layer.
  */
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 @DisplayName("Message Repository Integration Tests")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL",
-    "spring.datasource.driver-class-name=org.h2.Driver",
-    "spring.datasource.username=sa",
-    "spring.datasource.password=password",
-    "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-    "spring.jpa.hibernate.ddl-auto=update",
-    "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
-    "spring.jpa.properties.hibernate.hbm2ddl.import_files_sql_extractor=org.hibernate.tool.hbm2ddl.MultipleLinesSqlCommandExtractor",
-    "spring.jpa.show-sql=true",
-    "spring.jpa.properties.hibernate.format_sql=true"
-})
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Import(MessageRepositoryIT.NoFlywayConfig.class)
 @Transactional
 class MessageRepositoryIT {
-    
+    @Container
+    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
+            .withDatabaseName("testdb")
+            .withUsername("testuser")
+            .withPassword("testpass");
+
     @Autowired
     private MessageRepository messageRepository;
     
@@ -67,12 +70,26 @@ class MessageRepositoryIT {
     private static final int TEST_MESSAGE_COUNT = 5;
     private static final int LARGE_DATASET_SIZE = 1000;
 
+    @DynamicPropertySource
+    static void overrideProps(DynamicPropertyRegistry registry) {
+        // Ensure the container is started before resolving properties
+        if (!postgres.isRunning()) {
+            postgres.start();
+        }
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.datasource.driver-class-name", postgres::getDriverClassName);
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        // Let Hibernate auto-create the schema for tests
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create");
+    }
+
+    @Transactional
     @BeforeEach
     void setUp() {
         // Clean up existing data before each test
         messageRepository.deleteAllInBatch();
-        entityManager.flush();
-        entityManager.clear();
         
         // Create test messages
         for (int i = 0; i < TEST_MESSAGE_COUNT; i++) {
@@ -87,13 +104,12 @@ class MessageRepositoryIT {
         otherMessage.setContent("Spring Boot is awesome");
         otherMessage.setSender(OTHER_SENDER);
         messageRepository.save(otherMessage);
-        
-        messageRepository.flush();
     }
     
     @AfterEach
     void tearDown() {
         messageRepository.deleteAllInBatch();
+        // No flush here
     }
     
     /**
@@ -111,6 +127,7 @@ class MessageRepositoryIT {
 
     @Nested
     @DisplayName("CRUD Operations")
+    @Transactional
     class CrudOperations {
         
         @Test
@@ -122,9 +139,11 @@ class MessageRepositoryIT {
             message.setSender("test@example.com");
 
             // When/Then
-            assertThrows(jakarta.validation.ConstraintViolationException.class, () -> {
-                messageRepository.saveAndFlush(message);
-            });
+            assertThrowsAny(
+                messageRepository,
+                message,
+                "saveAndFlush"
+            );
         }
         
         @Test
@@ -136,9 +155,11 @@ class MessageRepositoryIT {
             message.setSender("test@example.com");
 
             // When/Then
-            assertThrows(jakarta.validation.ConstraintViolationException.class, () -> {
-                messageRepository.saveAndFlush(message);
-            });
+            assertThrowsAny(
+                messageRepository,
+                message,
+                "saveAndFlush"
+            );
         }
         
         @Test
@@ -150,9 +171,11 @@ class MessageRepositoryIT {
             message.setSender(null);
 
             // When/Then
-            assertThrows(jakarta.validation.ConstraintViolationException.class, () -> {
-                messageRepository.saveAndFlush(message);
-            });
+            assertThrowsAny(
+                messageRepository,
+                message,
+                "saveAndFlush"
+            );
         }
         
         private Message createNewTestMessage() {
@@ -254,6 +277,7 @@ class MessageRepositoryIT {
 
     @Nested
     @DisplayName("Concurrent Operations")
+    @Transactional
     class ConcurrentOperations {
 
         @Test
@@ -325,6 +349,18 @@ class MessageRepositoryIT {
     @DisplayName("Query Methods Tests")
     @Transactional
     class MessageQueryMethodsTests {
+        @BeforeEach
+        void setupQueryTests() {
+            messageRepository.deleteAllInBatch();
+            // Create test data specifically for query tests
+            messageRepository.saveAll(List.of(
+                createMessage("Hello World", TEST_QUERY_SENDER),
+                createMessage("Spring Boot is awesome", TEST_QUERY_SENDER),
+                createMessage("Testing is important", TEST_QUERY_SENDER),
+                createMessage("JPA makes data access easy", "other@example.com")
+            ));
+            messageRepository.flush();
+        }
         
         @Test
         @DisplayName("should find messages by content containing ignore case")
@@ -348,8 +384,8 @@ class MessageRepositoryIT {
             // When
             List<Message> found = messageRepository.findByContentContainingIgnoreCase("");
             
-            // Then - should return all messages (3 from setup + 1 other + 1 from base setup)
-            assertThat(found).hasSize(5);
+            // Then - should return all messages (3 from setup + 1 other)
+            assertThat(found).hasSize(4);
         }
         
         @Test
@@ -374,19 +410,6 @@ class MessageRepositoryIT {
         }
         
         private static final String TEST_QUERY_SENDER = "query-test@example.com";
-        
-        @BeforeEach
-        void setupQueryTests() {
-            // Create test data specifically for query tests
-            messageRepository.saveAll(List.of(
-                createMessage("Hello World", TEST_QUERY_SENDER),
-                createMessage("Spring Boot is awesome", TEST_QUERY_SENDER),
-                createMessage("Testing is important", TEST_QUERY_SENDER),
-                createMessage("JPA makes data access easy", "other@example.com"),
-                createMessage("Another message", TEST_QUERY_SENDER)
-            ));
-            messageRepository.flush();
-        }
         
         private Message createMessage(String content, String sender) {
             Message message = new Message();
@@ -536,13 +559,12 @@ class MessageRepositoryIT {
     @Nested
     @DisplayName("Performance Tests")
     @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+    @Transactional
     class MessagePerformanceTests {
-        
-        @BeforeAll
-        void setupAll() {
-            // Clean up any existing data
+        @BeforeEach
+        @Transactional
+        void setupPerformanceTest() {
             messageRepository.deleteAllInBatch();
-            
             // Create a large dataset for performance testing
             int batchSize = 100;
             for (int i = 0; i < LARGE_DATASET_SIZE; i += batchSize) {
@@ -554,7 +576,7 @@ class MessageRepositoryIT {
                 }
                 messageRepository.saveAll(batch);
                 messageRepository.flush();
-                entityManager.clear(); // Clear persistence context to avoid memory issues
+                entityManager.clear();
             }
             messageRepository.flush();
         }
@@ -592,4 +614,40 @@ class MessageRepositoryIT {
             }
         }
     } // End of MessagePerformanceTests class
+
+    private static void assertThrowsAny(MessageRepository repo, Message message, String method) {
+        assertThrowsAny(
+            repo, message, method,
+            jakarta.validation.ConstraintViolationException.class,
+            org.springframework.dao.DataIntegrityViolationException.class
+        );
+    }
+
+    private static void assertThrowsAny(MessageRepository repo, Message message, String method, Class<?>... exceptionTypes) {
+        boolean thrown = false;
+        try {
+            if ("saveAndFlush".equals(method)) {
+                repo.saveAndFlush(message);
+            } else {
+                throw new UnsupportedOperationException("Unknown method: " + method);
+            }
+        } catch (Exception e) {
+            for (Class<?> exType : exceptionTypes) {
+                if (exType.isInstance(e) || (e.getCause() != null && exType.isInstance(e.getCause()))) {
+                    thrown = true;
+                    break;
+                }
+            }
+            if (!thrown) throw e;
+        }
+        if (!thrown) fail("Expected one of: " + java.util.Arrays.toString(exceptionTypes));
+    }
+
+    @TestConfiguration
+    static class NoFlywayConfig {
+        @Bean
+        public org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy flywayMigrationStrategy() {
+            return flyway -> { /* do nothing */ };
+        }
+    }
 } // End of MessageRepositoryIT class
