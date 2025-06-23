@@ -269,11 +269,6 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.10</version>
-                <configuration>
-                    <propertyName>jacoco.agent.argLine</propertyName>
-                    <destFile>${project.build.directory}/jacoco.exec</destFile>
-                    <append>true</append>
-                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
@@ -289,6 +284,31 @@
                         </goals>
                     </execution>
                     <execution>
+                        <id>check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>post-unit-test</id>
                         <phase>test</phase>
                         <goals>
@@ -302,6 +322,11 @@
                         </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <propertyName>jacoco.agent.argLine</propertyName>
+                    <destFile>${project.build.directory}/jacoco.exec</destFile>
+                    <append>true</append>
+                </configuration>
             </plugin>
         </plugins>
     </build>

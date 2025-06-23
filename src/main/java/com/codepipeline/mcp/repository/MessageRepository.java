@@ -25,4 +25,6 @@ public interface MessageRepository extends JpaRepository<Message, String>, JpaSp
     Page<Message> findByContentContainingIgnoreCase(@Param("searchTerm") String searchTerm, Pageable pageable);
     
     long countBySender(String sender);
+
+    List<Message> findBySenderOrderByContentAsc(String sender);
 }

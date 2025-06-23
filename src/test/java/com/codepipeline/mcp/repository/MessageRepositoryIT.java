@@ -432,8 +432,8 @@ class MessageRepositoryIT {
             messageRepository.saveAll(testMessages);
             messageRepository.flush();
             
-            // When - Get all messages for the sender
-            List<Message> messages = messageRepository.findBySender(testSender);
+            // When - Get all messages for the sender (ordered)
+            List<Message> messages = messageRepository.findBySenderOrderByContentAsc(testSender);
             
             // Then
             assertThat(messages)
@@ -445,9 +445,9 @@ class MessageRepositoryIT {
             List<String> sortedContents = messages.stream()
                     .map(Message::getContent)
                     .sorted()
-                    .collect(java.util.stream.Collectors.toList());
-                    
-            assertThat(messages.stream().map(Message::getContent).collect(java.util.stream.Collectors.toList()))
+                    .toList();
+            
+            assertThat(messages.stream().map(Message::getContent).toList())
                     .containsExactlyElementsOf(sortedContents);
         }
 
