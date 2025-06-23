@@ -51,6 +51,10 @@ A professional Java Spring Boot microservice with OAuth2 authentication and WebS
 
 ## 🚀 Recent Updates
 
+- **Test Reliability & Transactional Context**
+  - All integration tests now run within a transactional context, ensuring reliable rollback and isolation.
+  - Fixed TransactionRequiredException errors in repository integration tests by annotating test classes and setup methods with `@Transactional`.
+  - Improved documentation for running and troubleshooting integration tests with Testcontainers and PostgreSQL.
 - **Enhanced Message Service**
   - Added input validation for message creation (null/empty checks for content and sender)
   - Improved error messages for validation failures
@@ -399,14 +403,29 @@ Run integration tests:
 ./mvnw verify -Pintegration-test
 ```
 
-- Integration tests use H2 in PostgreSQL mode by default, but some tests may use Testcontainers for a real PostgreSQL instance.
+- Integration tests use Testcontainers with a real PostgreSQL instance for full reliability and production-like behavior.
+- All repository and service integration tests are annotated with `@Transactional` to ensure automatic rollback and isolation.
 - Test data is isolated and rolled back after each test using `@Transactional`.
 - Test reliability is improved by parameterized tests and Docker availability checks.
 
-### Test Reliability Features
-- **Automatic rollback**: All tests are transactional and roll back changes after each test.
-- **Docker check**: Integration tests that require Docker will be skipped if Docker is not available.
-- **Parameterized tests**: Repeated validation scenarios are covered with parameterized tests for maintainability and coverage.
+### Test Reliability & Troubleshooting
+
+- **Transactional Context:** All integration tests are annotated with `@Transactional` at the class or method level. If you see `TransactionRequiredException`, ensure your test class or setup methods are annotated with `@Transactional`.
+- **Testcontainers:** Integration tests require Docker to be running. If Docker is not available, tests will be skipped. Make sure Docker is running before executing integration tests.
+- **Database Cleanup:** Test data is automatically cleaned up between tests using `deleteAllInBatch()` and transactional rollbacks.
+- **Running Specific Tests:**
+  - Run only repository integration tests:
+    ```bash
+    ./mvnw test -Dtest=MessageRepositoryIT
+    ```
+  - Run a specific test method:
+    ```bash
+    ./mvnw test -Dtest=MessageRepositoryIT#shouldSaveMessageSuccessfully
+    ```
+- **Common Issues:**
+  - `TransactionRequiredException`: Add `@Transactional` to your test class or method.
+  - `Connection refused` or `Could not connect to PostgreSQL`: Ensure Docker and the PostgreSQL container are running.
+  - `Testcontainers not found`: Ensure you are using the correct Maven profile and dependencies.
 
 ## 🚀 Getting Started
 
