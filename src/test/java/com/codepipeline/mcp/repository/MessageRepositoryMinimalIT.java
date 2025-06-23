@@ -1,6 +1,8 @@
 package com.codepipeline.mcp.repository;
 
 import com.codepipeline.mcp.model.Message;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +23,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @TestPropertySource(locations = "classpath:test-application.properties")
-public class MessageRepositoryMinimalIT {
+class MessageRepositoryMinimalIT {
+    @BeforeAll
+    static void checkDockerAvailability() {
+        boolean dockerAvailable = false;
+        try {
+            Process process = new ProcessBuilder("docker", "info").start();
+            int exitCode = process.waitFor();
+            dockerAvailable = (exitCode == 0);
+        } catch (Exception e) {
+            dockerAvailable = false;
+        }
+        Assumptions.assumeTrue(dockerAvailable, "Docker is not available. Skipping Docker-dependent integration tests.");
+    }
 
     @Autowired
     private TestEntityManager entityManager;

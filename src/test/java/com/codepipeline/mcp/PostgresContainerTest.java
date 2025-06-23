@@ -1,5 +1,6 @@
 package com.codepipeline.mcp;
 
+import org.testcontainers.junit.jupiter.Testcontainers;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -22,8 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Simple test to verify PostgreSQL container starts and is accessible.
  * This test doesn't load the Spring context.
  */
+@Testcontainers(disabledWithoutDocker = true)
 @Slf4j
-public class PostgresContainerTest {
+class PostgresContainerTest {
 
     private static final String POSTGRES_IMAGE = "postgres:14-alpine";
     private static final String TEST_DB_NAME = "testdb";
@@ -104,4 +106,6 @@ public class PostgresContainerTest {
             log.info("Driver Version: {}", conn.getMetaData().getDriverVersion());
         }
     }
+    
+    // The resource leak warning for PostgreSQLContainer is a false positive for Testcontainers usage and can be ignored.
 }

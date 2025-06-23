@@ -27,4 +27,6 @@ public interface MessageRepository extends JpaRepository<Message, String>, JpaSp
     long countBySender(String sender);
 
     List<Message> findBySenderOrderByContentAsc(String sender);
+
+    List<Message> findBySenderOrderByContentDesc(String sender);
 }

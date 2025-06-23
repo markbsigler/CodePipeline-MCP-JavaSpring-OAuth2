@@ -1,5 +1,6 @@
 package com.codepipeline.mcp.repository;
 
+import org.testcontainers.junit.jupiter.Testcontainers;
 import com.codepipeline.mcp.model.Message;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Integration tests for the {@link MessageRepository}.
  * Uses H2 in-memory database for testing the repository layer.
  */
+@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("Message Repository Integration Tests")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -105,24 +107,6 @@ class MessageRepositoryIT {
         message.setContent(content);
         message.setSender(sender);
         return message;
-    }
-
-    /**
-     * Utility method to check if Docker is available for Testcontainers-based tests.
-     */
-    public static boolean isDockerAvailable() {
-        try {
-            Process process = new ProcessBuilder("docker", "info").start();
-            int exitCode = process.waitFor();
-            return exitCode == 0;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    @BeforeAll
-    static void checkDockerAvailability() {
-        Assumptions.assumeTrue(isDockerAvailable(), "Docker is not available. Skipping Testcontainers-based tests.");
     }
 
     @Nested

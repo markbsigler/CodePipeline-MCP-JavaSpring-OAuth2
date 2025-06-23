@@ -2,6 +2,8 @@ package com.codepipeline.mcp.repository;
 
 import com.codepipeline.mcp.model.Message;
 import com.codepipeline.mcp.BaseIntegrationTest;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +16,19 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class MessageRepositorySimpleIT extends BaseIntegrationTest {
+class MessageRepositorySimpleIT extends BaseIntegrationTest {
+    @BeforeAll
+    static void checkDockerAvailability() {
+        boolean dockerAvailable = false;
+        try {
+            Process process = new ProcessBuilder("docker", "info").start();
+            int exitCode = process.waitFor();
+            dockerAvailable = (exitCode == 0);
+        } catch (Exception e) {
+            dockerAvailable = false;
+        }
+        Assumptions.assumeTrue(dockerAvailable, "Docker is not available. Skipping Docker-dependent integration tests.");
+    }
 
     @Autowired
     private TestEntityManager entityManager;

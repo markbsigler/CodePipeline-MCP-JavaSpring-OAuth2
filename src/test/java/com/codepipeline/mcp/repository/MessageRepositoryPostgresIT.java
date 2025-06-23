@@ -24,11 +24,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(MessageRepositoryPostgresIT.TestConfig.class)
-public class MessageRepositoryPostgresIT {
-    
+class MessageRepositoryPostgresIT {
     @Container
     private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:14-alpine")
             .withDatabaseName("testdb")
@@ -39,7 +38,7 @@ public class MessageRepositoryPostgresIT {
 
     @Autowired
     private MessageRepository messageRepository;
-    
+
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
@@ -51,24 +50,24 @@ public class MessageRepositoryPostgresIT {
         registry.add("spring.jpa.show-sql", () -> "true");
         registry.add("spring.jpa.properties.hibernate.format_sql", () -> "true");
     }
-    
+
     @TestConfiguration
     @EnableTransactionManagement
     public static class TestConfig {
         // Test-specific configuration
     }
-    
+
     @BeforeEach
     void setUp() {
         // Clean up test data before each test
         messageRepository.deleteAll();
     }
-    
+
     @Test
     void contextLoads() {
         assertThat(messageRepository).isNotNull();
     }
-    
+
     @Test
     void whenSaveMessage_thenCanRetrieveIt() {
         // given
@@ -77,19 +76,19 @@ public class MessageRepositoryPostgresIT {
         message.setContent("Test message content");
         message.setSender("testuser");
         message.setCreatedAt(LocalDateTime.now());
-        
+
         // when
         Message savedMessage = messageRepository.save(message);
-        
+
         // then
         assertThat(savedMessage).isNotNull();
         assertThat(savedMessage.getId()).isEqualTo("test-message-1");
-        
+
         Optional<Message> foundMessage = messageRepository.findById("test-message-1");
         assertThat(foundMessage).isPresent();
         assertThat(foundMessage.get().getContent()).isEqualTo("Test message content");
     }
-    
+
     @Test
     void whenFindById_thenReturnMessage() {
         // given
@@ -100,15 +99,15 @@ public class MessageRepositoryPostgresIT {
         message.setSender("testuser");
         message.setCreatedAt(LocalDateTime.now());
         messageRepository.save(message);
-        
+
         // when
         Optional<Message> foundMessage = messageRepository.findById(messageId);
-        
+
         // then
         assertThat(foundMessage).isPresent();
         assertThat(foundMessage.get().getContent()).isEqualTo("Find by ID test");
     }
-    
+
     @Test
     void whenFindAll_thenReturnAllMessages() {
         // given
@@ -118,23 +117,23 @@ public class MessageRepositoryPostgresIT {
         message1.setSender("testuser");
         message1.setCreatedAt(LocalDateTime.now());
         messageRepository.save(message1);
-        
+
         Message message2 = new Message();
         message2.setId("message-2");
         message2.setContent("Message 2");
         message2.setSender("testuser");
         message2.setCreatedAt(LocalDateTime.now());
         messageRepository.save(message2);
-        
+
         // when
         List<Message> messages = messageRepository.findAll();
-        
+
         // then
         assertThat(messages).hasSize(2);
         assertThat(messages).extracting(Message::getContent)
                 .containsExactlyInAnyOrder("Message 1", "Message 2");
     }
-    
+
     @Test
     void whenDelete_thenMessageIsRemoved() {
         // given
@@ -145,14 +144,14 @@ public class MessageRepositoryPostgresIT {
         message.setSender("testuser");
         message.setCreatedAt(LocalDateTime.now());
         messageRepository.save(message);
-        
+
         // when
         messageRepository.deleteById(messageId);
-        
+
         // then
         assertThat(messageRepository.findById(messageId)).isNotPresent();
     }
-    
+
     @Test
     void whenUpdate_thenMessageIsUpdated() {
         // given
@@ -163,17 +162,17 @@ public class MessageRepositoryPostgresIT {
         message.setSender("testuser");
         message.setCreatedAt(LocalDateTime.now());
         messageRepository.save(message);
-        
+
         // when
         Message foundMessage = messageRepository.findById(messageId).orElseThrow();
         foundMessage.setContent("Updated content");
         messageRepository.save(foundMessage);
-        
+
         // then
         Message updatedMessage = messageRepository.findById(messageId).orElseThrow();
         assertThat(updatedMessage.getContent()).isEqualTo("Updated content");
     }
-    
+
     @Test
     void whenFindBySender_thenReturnMessages() {
         // given
@@ -183,14 +182,14 @@ public class MessageRepositoryPostgresIT {
         message1.setSender("testuser");
         message1.setCreatedAt(LocalDateTime.now());
         messageRepository.save(message1);
-        
+
         Message message2 = new Message();
         message2.setId("sender-msg-2");
         message2.setContent("Another message from testuser");
         message2.setSender("testuser");
         message2.setCreatedAt(LocalDateTime.now());
         messageRepository.save(message2);
-        
+
         // Add a message from a different sender
         Message otherMessage = new Message();
         otherMessage.setId("other-sender-msg");
@@ -198,10 +197,10 @@ public class MessageRepositoryPostgresIT {
         otherMessage.setSender("otheruser");
         otherMessage.setCreatedAt(LocalDateTime.now());
         messageRepository.save(otherMessage);
-        
+
         // when
         List<Message> messages = messageRepository.findBySender("testuser");
-        
+
         // then
         assertThat(messages).hasSize(2);
         assertThat(messages).extracting(Message::getSender)

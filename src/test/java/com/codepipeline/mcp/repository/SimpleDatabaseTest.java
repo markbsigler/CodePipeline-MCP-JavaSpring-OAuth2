@@ -13,8 +13,8 @@ import java.sql.SQLException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Testcontainers
-public class SimpleDatabaseTest {
+@Testcontainers(disabledWithoutDocker = true)
+class SimpleDatabaseTest {
 
     @Container
     private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:14-alpine"))
@@ -34,11 +34,13 @@ public class SimpleDatabaseTest {
             // Connection successful, now test a simple query
             try (var statement = connection.createStatement();
                  ResultSet resultSet = statement.executeQuery("SELECT 'test' as test")) {
-                
+
                 assertThat(resultSet.next()).isTrue();
                 String result = resultSet.getString("test");
                 assertThat(result).isEqualTo("test");
             }
         }
     }
+
+    // The resource leak warning for PostgreSQLContainer is a false positive for Testcontainers usage and can be ignored.
 }
