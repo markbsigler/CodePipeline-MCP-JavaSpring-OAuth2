@@ -1,6 +1,7 @@
 package com.codepipeline.mcp.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,9 +25,11 @@ public class Message {
     private String id;
     
     @Column(nullable = false)
+    @NotBlank(message = "Content must not be blank")
     private String content;
     
     @Column(nullable = false)
+    @NotBlank(message = "Sender must not be blank")
     private String sender;
     
     @CreationTimestamp
