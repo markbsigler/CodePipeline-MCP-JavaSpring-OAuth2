@@ -83,6 +83,9 @@ public abstract class BaseIntegrationTest {
 
     @BeforeAll
     static void beforeAll() {
+        if (!com.codepipeline.mcp.util.DockerUtils.isDockerRunning()) {
+            throw new RuntimeException("Docker engine is not running. Please start Docker to run integration tests.");
+        }
         log.info("Starting PostgreSQL container...");
         if (!isContainerRunning()) {
             try {
