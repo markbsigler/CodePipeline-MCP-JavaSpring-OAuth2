@@ -82,13 +82,22 @@ class PostgresContainerTest {
         String username = postgresContainer.getUsername();
         String password = postgresContainer.getPassword();
 
+        // Ensure SSL is disabled in the JDBC URL
+        if (!jdbcUrl.contains("sslmode")) {
+            if (jdbcUrl.contains("?")) {
+                jdbcUrl = jdbcUrl + "&sslmode=disable";
+            } else {
+                jdbcUrl = jdbcUrl + "?sslmode=disable";
+            }
+        }
+
         log.info("Attempting to connect to PostgreSQL with URL: {}", jdbcUrl);
         
         // Set up connection properties
         Properties props = new Properties();
         props.setProperty("user", username);
         props.setProperty("password", password);
-        props.setProperty("ssl", "false");
+        // No need to set 'ssl' property, handled by URL
         
         // Connect to the database
         try (Connection conn = DriverManager.getConnection(jdbcUrl, props);
