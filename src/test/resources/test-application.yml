@@ -18,13 +18,17 @@ spring:
   test:
     database:
       replace: none
-      
+
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: http://dummy:8080/auth/realms/test
           jwk-set-uri: http://dummy:8080/auth/realms/test/protocol/openid-connect/certs
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 
 logging:
   level:
